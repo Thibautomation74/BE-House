@@ -1,0 +1,20 @@
+{
+ "generated_at": "2026-07-27T13:54+02:00",
+ "seen": 0,
+ "zones": [
+  {
+   "slug": "nord",
+   "label": "Nord — Brabant wallon",
+   "subtitle": "Ottignies, LLN, Walhain, Chastre, Court-Saint-Étienne, Perwez",
+   "count": 0,
+   "new_count": 0
+  },
+  {
+   "slug": "sud",
+   "label": "Sud — Namurois",
+   "subtitle": "Namur, Gembloux, Sombreffe, Floreffe, Éghezée, Andenne",
+   "count": 0,
+   "new_count": 0
+  }
+ ]
+}
