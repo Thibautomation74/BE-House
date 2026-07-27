@@ -40,13 +40,12 @@ imap:
 # n'ouvre jamais.
 # ===================================================================
 notify:
-  enabled: true
+  enabled: false
 
   # Destinataires du digest. Rien a voir avec la boite lue par le
   # script : ces personnes ne recoivent que le recapitulatif.
   to:
-    - adresse.de.ta.tante@example.com
-    - thibaultmt@icloud.com
+    - maisonrecherchebe@gmail.com
 
   smtp_host: smtp.gmail.com     # iCloud : smtp.mail.me.com, port 587
   smtp_port: 465
