@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#E5E9ED">
+<title>Veille maison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E5E9ED; --card:#F8F9FB;
+    --ink:#0E1826; --ink-2:#5C6A7A; --ink-3:#8B97A5;
+    --rule:#C0C9D3; --stamp:#A4392F; --good:#1C6650; --amber:#8A6414;
+    --grid:rgba(14,24,38,.045);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),
+                     linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px;
+    color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+    line-height:1.45;padding:0 clamp(14px,4vw,40px) 64px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header{padding:26px 0 18px;border-bottom:2px solid var(--ink)}
+  .meta{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;
+        text-transform:uppercase;color:var(--ink-2);display:flex;
+        justify-content:space-between;gap:12px;flex-wrap:wrap}
+  h1{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;
+     font-size:clamp(28px,5.5vw,48px);line-height:1.03;letter-spacing:-.015em;margin:8px 0 10px}
+  .tally{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-2)}
+  .tally b{color:var(--ink);font-weight:600}
+
+  .zones{display:flex;gap:0;border-bottom:1px solid var(--rule);margin-top:18px;overflow-x:auto}
+  .zones button{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:16px;font-weight:600;
+    background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-3);
+    padding:9px 16px 8px 0;margin-right:22px;cursor:pointer;white-space:nowrap;
+    transition:color .12s,border-color .12s}
+  .zones button:hover{color:var(--ink-2)}
+  .zones button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--stamp)}
+  .zones button:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+  .zones .badge{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;
+    color:var(--stamp);vertical-align:super;margin-left:5px}
+  .sub{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);padding:12px 0 0}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:16px 0 22px}
+  .filters button{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.06em;
+    text-transform:uppercase;background:transparent;color:var(--ink-2);border:1px solid var(--rule);
+    border-radius:2px;padding:7px 13px;cursor:pointer;transition:background .12s,color .12s,border-color .12s}
+  .filters button:hover{border-color:var(--ink-2);color:var(--ink)}
+  .filters button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--card)}
+  .filters button:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:3px;
+    padding:16px 16px 14px;display:flex;flex-direction:column;gap:11px;
+    text-decoration:none;color:inherit;transition:border-color .12s,transform .12s}
+  .card:hover{border-color:var(--ink);transform:translateY(-2px)}
+  .card:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+  .card.is-new{border-left:3px solid var(--stamp)}
+
+  .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .stamp{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;
+         text-transform:uppercase;color:var(--stamp);font-weight:600}
+  .portal{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3);letter-spacing:.08em}
+  .title{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:17px;line-height:1.22}
+
+  .figures{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap;font-family:"IBM Plex Mono",monospace}
+  .price{font-size:22px;font-weight:600;letter-spacing:-.02em}
+  .dim{font-size:12.5px;color:var(--ink-2)}
+  .sqm{font-size:12px;color:var(--ink-3)}
+
+  /* Jauge de terrain : le critere bloquant, donc l'element central */
+  .land{margin-top:1px}
+  .land-head{display:flex;justify-content:space-between;align-items:baseline;
+    font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3);margin-bottom:5px}
+  .land-head b{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .land-head b.short{color:var(--stamp)}
+  .land-head b.unknown{color:var(--amber)}
+  .bar{position:relative;height:6px;background:rgba(14,24,38,.07);border-radius:1px;overflow:hidden}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--good);border-radius:1px}
+  .bar i.short{background:var(--stamp)}
+  .bar.unknown{background:repeating-linear-gradient(90deg,rgba(138,100,20,.28) 0 4px,transparent 4px 8px)}
+  .min{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--ink);opacity:.55}
+
+  .checks{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
+  .chk{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.03em;
+    color:var(--amber);border:1px solid rgba(138,100,20,.35);border-radius:2px;padding:2px 6px}
+
+  .empty{border:1px dashed var(--rule);border-radius:3px;padding:44px 22px;text-align:center;
+    color:var(--ink-2);max-width:500px;margin:8px auto}
+  .empty h2{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:19px;color:var(--ink);margin-bottom:7px}
+  .empty code{font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--card);padding:1px 5px}
+
+  footer{margin-top:38px;padding-top:14px;border-top:1px solid var(--rule);
+    font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3);line-height:1.7}
+
+  @media (prefers-reduced-motion:no-preference){
+    .card{animation:rise .32s cubic-bezier(.2,.7,.3,1) backwards}
+    @keyframes rise{from{opacity:0;transform:translateY(8px)}}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="meta"><span>Veille maison</span><span id="stamp-date">—</span></div>
+    <h1 id="label">Chargement</h1>
+    <p class="tally" id="tally"></p>
+  </header>
+
+  <nav class="zones" id="zones" role="tablist" hidden></nav>
+  <p class="sub" id="sub"></p>
+
+  <nav class="filters" id="filters" hidden>
+    <button data-filter="all" aria-pressed="true">Tout</button>
+    <button data-filter="new" aria-pressed="false">Nouvelles</button>
+    <button data-filter="land" aria-pressed="false">Terrain confirmé</button>
+  </nav>
+
+  <main id="out"></main>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const nf = n => n == null ? "—" : n.toLocaleString("fr-BE");
+const euro = n => n == null ? "prix non lu" : nf(n) + " €";
+const out = document.getElementById("out");
+let state = { zones: [], listings: [], filter: "all", landMin: 500, landMax: 1400 };
+
+// zones.json liste les zones ; chaque zone a son propre fichier de donnees.
+fetch("data/zones.json?" + Date.now())
+  .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(idx => {
+    state.zones = idx.zones || [];
+    if (!state.zones.length) throw new Error("aucune zone");
+    buildTabs();
+    return loadZone(state.zones[0].slug);
+  })
+  .catch(() => {
+    document.getElementById("label").textContent = "Aucune donnee";
+    out.innerHTML = `<div class="empty"><h2>Les fichiers du jour sont introuvables</h2>
+      <p>Lance le workflow <code>Veille immo quotidienne</code> une premiere fois
+      pour generer <code>docs/data/</code>.</p></div>`;
+  });
+
+function buildTabs() {
+  const nav = document.getElementById("zones");
+  nav.hidden = false;
+  nav.innerHTML = state.zones.map((z, i) =>
+    `<button role="tab" data-slug="${z.slug}" aria-selected="${i === 0}">${z.label}` +
+    (z.new_count ? `<span class="badge">${z.new_count}</span>` : "") + `</button>`).join("");
+  nav.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    [...nav.children].forEach(x => x.setAttribute("aria-selected", x === b));
+    state.filter = "all";
+    loadZone(b.dataset.slug);
+  });
+}
+
+function loadZone(slug) {
+  return fetch(`data/${slug}.json?` + Date.now()).then(r => r.json()).then(boot);
+}
+
+function boot(data) {
+  state.listings = data.listings || [];
+  const crit = data.criteria || {};
+  state.landMin = crit.land_min || 700;
+  const lands = state.listings.map(l => l.land_area).filter(Boolean);
+  state.landMax = Math.max(state.landMin * 2, ...lands);
+
+  const d = new Date(data.generated_at);
+  document.getElementById("stamp-date").textContent =
+    d.toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" }) +
+    " · " + d.toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" });
+  document.getElementById("label").textContent = crit.label || "Annonces du jour";
+  document.getElementById("sub").textContent = crit.subtitle || "";
+  document.getElementById("tally").innerHTML =
+    `<b>${data.count}</b> retenue${data.count > 1 ? "s" : ""} sur ${data.seen ?? "?"} reçues · ` +
+    `<b>${data.new_count}</b> nouvelle${data.new_count > 1 ? "s" : ""}`;
+  document.getElementById("foot").innerHTML =
+    "Généré le " + d.toLocaleString("fr-BE") +
+    rejectionLine(data.rejected, data.seen) +
+    "<br>Une annonce n'est écartée que sur une donnée effectivement lue. " +
+    "Les mentions en ambre signalent une information absente de l'alerte, pas un défaut du bien.";
+
+  const filters = document.getElementById("filters");
+  filters.hidden = !state.listings.length;
+  [...filters.children].forEach(x => x.setAttribute("aria-pressed", x.dataset.filter === "all"));
+  if (!filters.dataset.bound) {
+    filters.dataset.bound = "1";
+    filters.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      state.filter = b.dataset.filter;
+      [...filters.children].forEach(x => x.setAttribute("aria-pressed", x === b));
+      render();
+    });
+  }
+  render();
+}
+
+function rejectionLine(rejected, seen) {
+  if (!rejected) return "";
+  const rows = Object.entries(rejected).sort((a, b) => b[1] - a[1]);
+  if (!rows.length) return "";
+  const total = rows.reduce((s, r) => s + r[1], 0);
+  return `<br>${total} écartée${total > 1 ? "s" : ""} sur ${seen ?? "?"} reçues — ` +
+    rows.map(([reason, n]) => `${reason} ${n}`).join(" · ") +
+    `<br>Le motif en tête est ton critère le plus coûteux : c'est celui à relâcher en premier si la page reste vide.`;
+}
+
+function render() {
+  const rows = state.listings.filter(l =>
+    state.filter === "new"  ? l.is_new :
+    state.filter === "land" ? l.land_area != null : true);
+
+  if (!rows.length) {
+    out.innerHTML = `<div class="empty"><h2>Rien à signaler ce matin</h2>
+      <p>Aucune annonce reçue des portails depuis hier 7h. Vérifie que tes alertes
+      sont toujours actives, et jette un oeil a l’autre zone.</p></div>`;
+    return;
+  }
+
+  out.innerHTML = '<div class="grid">' + rows.map((l, i) => {
+    const known = l.land_area != null;
+    const short = known && l.land_area < state.landMin;
+    const pct = known ? Math.max(3, Math.min(100, l.land_area / state.landMax * 100)) : 0;
+    const minPct = Math.max(3, Math.min(100, state.landMin / state.landMax * 100));
+
+    const dims = [
+      l.bedrooms  ? l.bedrooms + " ch." : null,
+      l.living_area ? nf(l.living_area) + " m² hab." : null,
+      l.facades   ? l.facades + " façades" : null,
+      l.peb       ? "PEB " + l.peb : null,
+      l.zipcode || null
+    ].filter(Boolean).join(" · ");
+
+    return `<a class="card ${l.is_new ? "is-new" : ""}" href="${l.url}" target="_blank" rel="noopener"
+              style="animation-delay:${Math.min(i * 28, 340)}ms">
+      <div class="top">
+        <span class="stamp">${l.is_new ? "Nouveau" : "Vu le " + l.first_seen.slice(8) + "/" + l.first_seen.slice(5,7)}</span>
+        <span class="portal">${l.portal}</span>
+      </div>
+      <div class="title">${l.title}</div>
+      <div class="figures">
+        <span class="price">${euro(l.price)}</span>
+        <span class="dim">${dims}</span>
+        ${l.price_per_sqm ? `<span class="sqm">${nf(l.price_per_sqm)} €/m²</span>` : ""}
+      </div>
+      <div class="land">
+        <div class="land-head">
+          <span>Terrain</span>
+          <b class="${known ? (short ? "short" : "") : "unknown"}">
+            ${known ? nf(l.land_area) + " m²" : "non précisé"}
+          </b>
+        </div>
+        <div class="bar ${known ? "" : "unknown"}">
+          ${known ? `<i class="${short ? "short" : ""}" style="width:${pct}%"></i>` : ""}
+          <span class="min" style="left:${minPct}%"></span>
+        </div>
+      </div>
+      ${l.unknown && l.unknown.length
+        ? `<div class="checks">${l.unknown.map(u => `<span class="chk">${u}</span>`).join("")}</div>`
+        : ""}
+    </a>`;
+  }).join("") + "</div>";
+}
+</script>
+</body>
+</html>

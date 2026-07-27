@@ -1,0 +1,27 @@
+# ===================================================================
+# Connexion a la boite mail dediee. Partagee par toutes les zones.
+# L'adresse se change ici, ou par variable d'environnement
+# (IMAP_USER / IMAP_HOST) sans toucher au fichier.
+#
+# Les criteres de recherche sont dans zones/*.yaml — un fichier par
+# zone. Ajouter une zone = deposer un fichier de plus, rien d'autre.
+# ===================================================================
+imap:
+  host: imap.mail.me.com        # iCloud. Gmail : imap.gmail.com
+  user: thibaultmt@icloud.com
+  folder: INBOX
+  lookback_hours: 26
+
+  senders:
+    - immoweb.be
+    - zimmo.be
+    - immovlan.be
+    - immoscoop.be
+    - realo.be
+    - logic-immo.be
+    - biddit.be
+    - era.be
+    - century21.be
+    - trevi.be
+    - weinvest.be
+    - easyimmo.be

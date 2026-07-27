@@ -1,0 +1,36 @@
+# Zone de recherche. Les reglages communs sont dupliques ici
+# volontairement : chaque zone doit pouvoir diverger (budget,
+# terrain) sans effet de bord sur l'autre.
+
+criteria:
+  label: Nord — Brabant wallon
+  subtitle: Ottignies, LLN, Walhain, Chastre, Court-Saint-Étienne, Perwez
+  price_max: 450000
+  bedrooms_min: 3
+  bathrooms_min: 1
+  facades_min: 3
+  land_min: 500
+  zipcode_ranges:
+  - - 1300
+    - 1499
+  zipcode_exclude:
+  - - 6000
+    - 6299
+  reference_price_per_sqm: null
+  exclude_keywords:
+  - à rénover
+  - a renover
+  - à rafraîchir
+  - travaux à prévoir
+  - travaux a prevoir
+  - gros oeuvre
+  - gros œuvre
+  - à moderniser
+  - projet de rénovation
+  - pierres apparentes
+  - viager
+  - te renoveren
+  always_verify:
+  - cuisine ouverte
+  - pas de pierre apparente à l'intérieur
+  - environnement calme
