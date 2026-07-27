@@ -324,10 +324,27 @@ def fetch_emails(cfg: dict) -> list[str]:
         if status != "OK":
             return bodies
         for num in data[0].split():
-            status, payload = imap.fetch(num, "(RFC822)")
-            if status != "OK" or not payload or not payload[0]:
+            # BODY.PEEK[] et non RFC822 : RFC822 marque le message comme LU.
+            # Sur une boite personnelle, cela viderait tous les non-lus chaque
+            # matin. PEEK lit sans rien modifier.
+            status, payload = imap.fetch(num, "(BODY.PEEK[])")
+            if status != "OK" or not payload:
                 continue
-            msg = email.message_from_bytes(payload[0][1])
+
+            # iCloud intercale des lignes de service (de simples bytes) entre
+            # les vraies reponses (des tuples). On ne garde que les tuples.
+            raw = next((part[1] for part in payload
+                        if isinstance(part, tuple) and len(part) > 1
+                        and isinstance(part[1], (bytes, bytearray))), None)
+            if not raw:
+                continue
+
+            try:
+                msg = email.message_from_bytes(raw)
+            except Exception as err:      # un message illisible ne doit pas
+                print(f"  message ignore ({err})")  # arreter toute la collecte
+                continue
+
             sender = decode(msg.get("From", "")).lower()
             allowed = conf.get("senders") or []
             if allowed and not any(s.lower() in sender for s in allowed):
