@@ -6,9 +6,17 @@
 # Les criteres de recherche sont dans zones/*.yaml — un fichier par
 # zone. Ajouter une zone = deposer un fichier de plus, rien d'autre.
 # ===================================================================
+# Fenetre d'affichage : la page montre les annonces des N derniers
+# jours, la plus fraiche en tete. Au-dela, elles sont oubliees.
+# Le mail quotidien, lui, ne liste que celles du matin meme.
+retention_days: 7
+
+# Adresse publique de la page, reprise en bas du mail quotidien.
+page_url: https://thibautomation74.github.io/BE-House/
+
 imap:
-  host: imap.mail.me.com        # iCloud. Gmail : imap.gmail.com
-  user: thibaultmt@icloud.com
+  host: imap.gmail.com          # Gmail. iCloud : imap.mail.me.com
+  user: ""                      # vide = la valeur du secret IMAP_USER
   folder: INBOX
   lookback_hours: 26
 
@@ -25,3 +33,24 @@ imap:
     - trevi.be
     - weinvest.be
     - easyimmo.be
+
+# ===================================================================
+# Digest quotidien. C'est le seul mail qu'un humain recoit : les
+# alertes des portails arrivent dans la boite dediee que personne
+# n'ouvre jamais.
+# ===================================================================
+notify:
+  enabled: true
+
+  # Destinataires du digest. Rien a voir avec la boite lue par le
+  # script : ces personnes ne recoivent que le recapitulatif.
+  to:
+    - adresse.de.ta.tante@example.com
+    - thibaultmt@icloud.com
+
+  smtp_host: smtp.gmail.com     # iCloud : smtp.mail.me.com, port 587
+  smtp_port: 465
+
+  # false = pas de mail les matins sans nouveaute. Evite d'habituer
+  # le destinataire a ignorer un mail quotidien vide.
+  send_when_empty: false

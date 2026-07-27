@@ -27,6 +27,8 @@ from zoneinfo import ZoneInfo
 import yaml
 from bs4 import BeautifulSoup
 
+from notify import send_digest
+
 ROOT = Path(__file__).parent
 DATA = ROOT / "docs" / "data"
 BRUSSELS = ZoneInfo("Europe/Brussels")
@@ -50,15 +52,27 @@ PORTALS = [
     ("Easyimmo",   re.compile(r"easyimmo\.be/", re.I),                     re.compile(r"/([\w\-]{4,})/?$")),
 ]
 
-# Prix : "450.000 €", "€ 450.000", "450 000 EUR"
-RE_PRICE_A = re.compile(r"(\d[\d\s\u00a0.]{4,})\s*(?:€|EUR\b|euros?)", re.I)
-RE_PRICE_B = re.compile(r"(?:€|EUR)\s*(\d[\d\s\u00a0.]{4,})", re.I)
+# Prix : "450.000 €", "€ 450.000", "450 000 EUR", "425000 €".
+#
+# Le (?<!\d) est indispensable : sans lui, "Ref. 11482093 425.000 €" est lu
+# comme un seul nombre, le numero de reference se collant au prix. On exige
+# donc soit des groupes de 3 chiffres separes proprement, soit un nombre
+# compact de 4 a 7 chiffres — jamais un melange.
+_MONTANT = r"(?<!\d)(\d{1,3}(?:[.\s\u00a0]\d{3})+|\d{4,7})"
+RE_PRICE_A = re.compile(_MONTANT + r"\s*(?:€|EUR\b|euros?)", re.I)
+RE_PRICE_B = re.compile(r"(?:€|EUR)\s*" + _MONTANT, re.I)
 
 RE_BEDROOMS = re.compile(r"(\d{1,2})\s*(?:chambres?\b|ch\.|slaapkamers?\b|bedrooms?\b)", re.I)
 RE_BATHROOMS = re.compile(r"(\d{1,2})\s*(?:salles?\s+de\s+bains?|badkamers?)", re.I)
 RE_FACADES = re.compile(r"(\d)\s*(?:fa[cç]ades?|gevels?)", re.I)
 RE_PEB = re.compile(r"\b(?:PEB|EPC)\s*[:\-]?\s*([A-G])\b", re.I)
-RE_ZIP = re.compile(r"\b([1-9]\d{3})\b")
+# Code postal belge : 4 chiffres — exactement comme une surface de terrain.
+# "terrain 1100 m²" serait lu comme le code postal 1100, et "1400 m²" comme
+# Nivelles : l'annonce basculerait dans la mauvaise zone. On exclut donc tout
+# nombre suivi d'une unite, et on interroge d'abord l'URL, ou les portails
+# belges placent le code postal de maniere fiable : .../floreffe/5150/11000003
+RE_ZIP = re.compile(r"\b([1-9]\d{3})\b(?!\s*(?:m\s*(?:²|2\b)|€|EUR|ares?|ca\b))", re.I)
+RE_ZIP_URL = re.compile(r"/([1-9]\d{3})/")
 
 # Terrain : forme metrique explicitement etiquetee
 RE_TERRAIN_M2 = re.compile(
@@ -69,9 +83,14 @@ RE_TERRAIN_ARES = re.compile(r"(\d{1,3})\s*a(?:res?)?\s*(?:(\d{1,2})\s*ca)?", re
 # Surface habitable etiquetee
 RE_HAB_LABEL = re.compile(
     r"(?:habitable|hab\.|woonopp|bewoonbare?)[^\d]{0,15}(\d[\d\s\u00a0.]{1,6})\s*m\s*(?:²|2\b)", re.I)
-RE_ANY_M2 = re.compile(r"(\d[\d\s\u00a0.]{1,6})\s*m\s*(?:²|2\b)", re.I)
+# Meme precaution que pour les prix, sur les surfaces.
+RE_ANY_M2 = re.compile(r"(?<!\d)(\d{1,3}(?:[.\s\u00a0]\d{3})+|\d{1,4})\s*m\s*(?:²|2\b)", re.I)
 
 RE_TRACKING = re.compile(r"[?&](utm_[^&]+|xtor[^&]*|cmpid[^&]*|mtm_[^&]*|pk_[^&]*)", re.I)
+
+
+BASE_FIELDS = ("id", "portal", "url", "title", "price", "living_area",
+               "land_area", "bedrooms", "bathrooms", "facades", "peb", "zipcode")
 
 
 @dataclass
@@ -90,6 +109,7 @@ class Listing:
     zipcode: str = ""
     price_per_sqm: int | None = None
     first_seen: str = ""
+    age_days: int = 0
     is_new: bool = True
     flags: list[str] = field(default_factory=list)
     unknown: list[str] = field(default_factory=list)
@@ -199,7 +219,9 @@ def parse_email(raw_html: str) -> list[Listing]:
         baths = RE_BATHROOMS.search(text)
         facades = RE_FACADES.search(text)
         peb = RE_PEB.search(text)
-        zipc = RE_ZIP.search(text)
+        # L'URL prime sur le texte : elle n'est pas polluee par les surfaces.
+        zip_url = RE_ZIP_URL.search(url)
+        zipc = zip_url or RE_ZIP.search(rest)
 
         if price is None and living is None and land is None:
             continue  # lien de service (compte, desinscription), pas une annonce
@@ -299,11 +321,62 @@ def apply_criteria(listings: list[Listing], crit: dict) -> tuple[list[Listing], 
     return kept, rejects
 
 
-def merge_history(listings: list[Listing], today: str, history: dict) -> list[Listing]:
-    for item in listings:
-        item.first_seen = history.setdefault(item.id, today)
-        item.is_new = item.first_seen == today
-    return listings
+def load_store() -> dict:
+    """Le magasin garde chaque annonce vue, avec sa date de premiere apparition.
+
+    Sans lui, la page ne pourrait montrer que les annonces du matin meme :
+    les emails d'hier ne reviennent pas.
+    """
+    path = DATA / "store.json"
+    if not path.exists():
+        # Reprise de l'ancien format (identifiant -> date), sans les donnees.
+        legacy = DATA / "history.json"
+        if legacy.exists():
+            try:
+                old = json.loads(legacy.read_text())
+                return {k: {"first_seen": v, "data": {}} for k, v in old.items()
+                        if isinstance(v, str)}
+            except Exception:
+                pass
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return {}
+
+
+def update_store(store: dict, fresh: list[Listing], today: str, keep_days: int) -> dict:
+    """Ajoute les annonces du jour et purge celles qui depassent la fenetre."""
+    for item in fresh:
+        entry = store.get(item.id)
+        data = {k: getattr(item, k) for k in BASE_FIELDS}
+        if entry:
+            entry["data"] = data          # on rafraichit prix et libelle
+        else:
+            store[item.id] = {"first_seen": today, "data": data}
+
+    limit = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=keep_days - 1)).date()
+    return {
+        key: val for key, val in store.items()
+        if val.get("data") and
+        datetime.strptime(val["first_seen"], "%Y-%m-%d").date() >= limit
+    }
+
+
+def store_to_listings(store: dict, today: str) -> list[Listing]:
+    """Reconstruit les objets, en calculant l'age de chaque annonce en jours."""
+    now = datetime.strptime(today, "%Y-%m-%d").date()
+    out = []
+    for key, val in store.items():
+        data = {k: v for k, v in val["data"].items() if k in BASE_FIELDS}
+        if not data.get("id"):
+            continue
+        item = Listing(**data)
+        item.first_seen = val["first_seen"]
+        item.age_days = (now - datetime.strptime(val["first_seen"], "%Y-%m-%d").date()).days
+        item.is_new = item.age_days == 0
+        out.append(item)
+    return out
 
 
 def fetch_emails(cfg: dict) -> list[str]:
@@ -380,10 +453,13 @@ def main() -> None:
     print(f"{len(unique)} annonces distinctes lues dans la boite.")
 
     DATA.mkdir(parents=True, exist_ok=True)
-    hist_path = DATA / "history.json"
-    history = json.loads(hist_path.read_text()) if hist_path.exists() else {}
+    keep_days = int(cfg.get("retention_days", 7))
+    store = update_store(load_store(), list(unique.values()), today, keep_days)
+    pool = store_to_listings(store, today)
+    print(f"{len(pool)} annonces dans la fenetre de {keep_days} jours "
+          f"(dont {sum(1 for x in pool if x.is_new)} de ce matin).")
 
-    index = []
+    index, sections = [], []
     for path in load_zones():
         zone = yaml.safe_load(path.read_text(encoding="utf-8"))
         crit = zone.get("criteria", {})
@@ -392,9 +468,11 @@ def main() -> None:
         # deepcopy indispensable : apply_criteria enrichit les objets
         # (drapeaux, prix au m2). Sans copie, la zone 2 heriterait des
         # annotations de la zone 1.
-        kept, rejects = apply_criteria(deepcopy(list(unique.values())), crit)
-        kept = merge_history(kept, today, history)
-        kept.sort(key=lambda x: (not x.is_new, -(x.land_area or 0)))
+        kept, rejects = apply_criteria(deepcopy(pool), crit)
+        # Tri : la fraicheur d'abord, le terrain ensuite. Une annonce du
+        # matin passe toujours devant une annonce de mardi, quel que soit
+        # son jardin.
+        kept.sort(key=lambda x: (x.age_days, -(x.land_area or 0)))
 
         (DATA / f"{slug}.json").write_text(json.dumps({
             "generated_at": now.isoformat(timespec="minutes"),
@@ -402,9 +480,16 @@ def main() -> None:
             "count": len(kept),
             "new_count": sum(1 for x in kept if x.is_new),
             "seen": len(unique),
+            "retention_days": keep_days,
             "rejected": rejects,
             "listings": [asdict(x) for x in kept],
         }, ensure_ascii=False, indent=1), encoding="utf-8")
+
+        # Le digest ne liste que les nouveautes : recevoir chaque matin les
+        # memes annonces que la veille userait l'attention en une semaine.
+        sections.append((crit.get("label", slug), crit.get("subtitle", ""),
+                         [asdict(x) for x in kept if x.is_new],
+                         crit.get("land_min", 0)))
 
         index.append({"slug": slug, "label": crit.get("label", slug),
                       "subtitle": crit.get("subtitle", ""),
@@ -416,10 +501,24 @@ def main() -> None:
         for reason, n in sorted(rejects.items(), key=lambda kv: -kv[1]):
             print(f"      recalees sur {reason} : {n}")
 
-    hist_path.write_text(json.dumps(history, indent=0))
+    (DATA / "store.json").write_text(json.dumps(store, ensure_ascii=False, indent=1),
+                                     encoding="utf-8")
     (DATA / "zones.json").write_text(json.dumps(
-        {"generated_at": now.isoformat(timespec="minutes"), "seen": len(unique), "zones": index},
+        {"generated_at": now.isoformat(timespec="minutes"), "seen": len(unique),
+         "retention_days": keep_days, "zones": index},
         ensure_ascii=False, indent=1), encoding="utf-8")
+
+    jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+            "août", "septembre", "octobre", "novembre", "décembre"]
+    date_label = f"{jours[now.weekday()]} {now.day} {mois[now.month - 1]}"
+
+    try:
+        send_digest(sections, cfg, cfg.get("page_url", ""), date_label)
+    except Exception as err:
+        # Un echec d'envoi ne doit pas faire echouer la collecte : les donnees
+        # sont deja ecrites et la page reste a jour.
+        print(f"Envoi du digest impossible : {err}")
 
 
 if __name__ == "__main__":
