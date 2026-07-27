@@ -1,6 +1,7 @@
 {
- "generated_at": "2026-07-27T13:54+02:00",
+ "generated_at": "2026-07-27T16:49+02:00",
  "seen": 0,
+ "retention_days": 7,
  "zones": [
   {
    "slug": "nord",

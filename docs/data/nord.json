@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-07-27T13:54+02:00",
+ "generated_at": "2026-07-27T16:49+02:00",
  "criteria": {
   "label": "Nord — Brabant wallon",
   "subtitle": "Ottignies, LLN, Walhain, Chastre, Court-Saint-Étienne, Perwez",
@@ -44,6 +44,7 @@
  "count": 0,
  "new_count": 0,
  "seen": 0,
+ "retention_days": 7,
  "rejected": {},
  "listings": []
 }
