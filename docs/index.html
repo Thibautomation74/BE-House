@@ -62,7 +62,18 @@
     text-decoration:none;color:inherit;transition:border-color .12s,transform .12s}
   .card:hover{border-color:var(--ink);transform:translateY(-2px)}
   .card:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
-  .card.is-new{border-left:3px solid var(--stamp)}
+  /* Gradation de fraicheur : plus l'annonce est recente, plus le liseré
+     de gauche est marqué. On lit l'age d'un coup d'oeil, sans lire le texte. */
+  .card.age0{border-left:3px solid var(--stamp);box-shadow:0 1px 0 rgba(164,57,47,.18)}
+  .card.age1{border-left:3px solid rgba(164,57,47,.45)}
+  .card.age2{border-left:3px solid var(--rule)}
+
+  .badge-age{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;font-weight:600;color:var(--ink-3)}
+  .badge-age.age0{color:var(--stamp)}
+  .badge-age.age1{color:var(--ink-2)}
+  .dot-fresh{display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--stamp);margin-right:6px;vertical-align:1px}
 
   .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .stamp{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;
@@ -87,6 +98,16 @@
   .bar i.short{background:var(--stamp)}
   .bar.unknown{background:repeating-linear-gradient(90deg,rgba(138,100,20,.28) 0 4px,transparent 4px 8px)}
   .min{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--ink);opacity:.55}
+
+  .go{
+    display:inline-block;margin-top:2px;align-self:flex-start;
+    background:var(--ink);color:var(--card);
+    font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:13px;
+    letter-spacing:.02em;padding:8px 15px;border-radius:2px;
+    transition:background .12s;
+  }
+  .card:hover .go{background:var(--stamp)}
+  .go .arrow{font-family:"IBM Plex Mono",monospace;font-size:11px;margin-left:5px;opacity:.75}
 
   .checks{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
   .chk{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.03em;
@@ -119,7 +140,7 @@
 
   <nav class="filters" id="filters" hidden>
     <button data-filter="all" aria-pressed="true">Tout</button>
-    <button data-filter="new" aria-pressed="false">Nouvelles</button>
+    <button data-filter="new" aria-pressed="false">Ce matin</button>
     <button data-filter="land" aria-pressed="false">Terrain confirmé</button>
   </nav>
 
@@ -181,12 +202,13 @@ function boot(data) {
   document.getElementById("label").textContent = crit.label || "Annonces du jour";
   document.getElementById("sub").textContent = crit.subtitle || "";
   document.getElementById("tally").innerHTML =
-    `<b>${data.count}</b> retenue${data.count > 1 ? "s" : ""} sur ${data.seen ?? "?"} reçues · ` +
-    `<b>${data.new_count}</b> nouvelle${data.new_count > 1 ? "s" : ""}`;
+    `<b>${data.count}</b> maison${data.count > 1 ? "s" : ""}` +
+    (data.new_count ? ` · <b>${data.new_count}</b> nouvelle${data.new_count > 1 ? "s" : ""} ce matin` : "");
   document.getElementById("foot").innerHTML =
     "Généré le " + d.toLocaleString("fr-BE") +
     rejectionLine(data.rejected, data.seen) +
-    "<br>Une annonce n'est écartée que sur une donnée effectivement lue. " +
+    "<br>La page conserve les annonces des sept derniers jours, la plus récente en tête. "
+    + "Une annonce n'est écartée que sur une donnée effectivement lue. " +
     "Les mentions en ambre signalent une information absente de l'alerte, pas un défaut du bien.";
 
   const filters = document.getElementById("filters");
@@ -221,8 +243,9 @@ function render() {
 
   if (!rows.length) {
     out.innerHTML = `<div class="empty"><h2>Rien à signaler ce matin</h2>
-      <p>Aucune annonce reçue des portails depuis hier 7h. Vérifie que tes alertes
-      sont toujours actives, et jette un oeil a l’autre zone.</p></div>`;
+      <p>Aucune annonce ne correspond à ces critères sur les sept derniers jours.
+      Vérifie que les alertes sont toujours actives sur les portails,
+      et regarde l’autre zone.</p></div>`;
     return;
   }
 
@@ -240,10 +263,16 @@ function render() {
       l.zipcode || null
     ].filter(Boolean).join(" · ");
 
-    return `<a class="card ${l.is_new ? "is-new" : ""}" href="${l.url}" target="_blank" rel="noopener"
+    const age = l.age_days ?? 0;
+    const ageCls = age === 0 ? "age0" : age === 1 ? "age1" : "age2";
+    const ageTxt = age === 0 ? '<span class="dot-fresh"></span>Ce matin'
+                 : age === 1 ? "Hier"
+                 : `Il y a ${age} jours`;
+
+    return `<a class="card ${ageCls}" href="${l.url}" target="_blank" rel="noopener"
               style="animation-delay:${Math.min(i * 28, 340)}ms">
       <div class="top">
-        <span class="stamp">${l.is_new ? "Nouveau" : "Vu le " + l.first_seen.slice(8) + "/" + l.first_seen.slice(5,7)}</span>
+        <span class="badge-age ${ageCls}">${ageTxt}</span>
         <span class="portal">${l.portal}</span>
       </div>
       <div class="title">${l.title}</div>
@@ -267,6 +296,7 @@ function render() {
       ${l.unknown && l.unknown.length
         ? `<div class="checks">${l.unknown.map(u => `<span class="chk">${u}</span>`).join("")}</div>`
         : ""}
+      <span class="go">Voir sur ${l.portal}<span class="arrow">↗</span></span>
     </a>`;
   }).join("") + "</div>";
 }
