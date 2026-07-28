@@ -1,19 +1,12 @@
 {
- "generated_at": "2026-07-28T08:53+02:00",
+ "generated_at": "2026-07-28T09:49+02:00",
  "seen": 0,
  "retention_days": 7,
  "zones": [
   {
-   "slug": "nord",
-   "label": "Nord — Brabant wallon",
-   "subtitle": "Ottignies, LLN, Walhain, Chastre, Court-Saint-Étienne, Perwez",
-   "count": 0,
-   "new_count": 0
-  },
-  {
-   "slug": "sud",
-   "label": "Sud — Namurois",
-   "subtitle": "Namur, Gembloux, Sombreffe, Floreffe, Éghezée, Andenne",
+   "slug": "toutes",
+   "label": "Maisons à voir",
+   "subtitle": "Brabant wallon, Namurois — hors orbite de Charleroi",
    "count": 0,
    "new_count": 0
   }
