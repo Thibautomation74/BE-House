@@ -1,59 +1,60 @@
 # ===================================================================
-# Connexion a la boite mail dediee. Partagee par toutes les zones.
-# L'adresse se change ici, ou par variable d'environnement
-# (IMAP_USER / IMAP_HOST) sans toucher au fichier.
-#
-# Les criteres de recherche sont dans zones/*.yaml — un fichier par
-# zone. Ajouter une zone = deposer un fichier de plus, rien d'autre.
+# Reglages generaux. Les criteres de recherche sont dans zones/*.yaml
 # ===================================================================
+
 # Fenetre d'affichage : la page montre les annonces des N derniers
 # jours, la plus fraiche en tete. Au-dela, elles sont oubliees.
-# Le mail quotidien, lui, ne liste que celles du matin meme.
 retention_days: 7
 
 # Adresse publique de la page, reprise en bas du mail quotidien.
 page_url: https://thibautomation74.github.io/BE-House/
 
+# ===================================================================
+# Boite de collecte. L'adresse et le mot de passe vivent dans les
+# secrets GitHub IMAP_USER et IMAP_PASSWORD : le depot etant public,
+# rien de personnel ne doit figurer ici.
+# ===================================================================
 imap:
-  host: imap.gmail.com          # Gmail. iCloud : imap.mail.me.com
-  user: ""                      # vide = la valeur du secret IMAP_USER
+  host: imap.gmail.com          # iCloud : imap.mail.me.com
+  user: ""                      # vide = valeur du secret IMAP_USER
   folder: INBOX
+
   # 50h et non 26 : si GitHub saute une journee de planification, le
-  # passage du lendemain rattrape quand meme les alertes manquees.
-  # Le magasin dedoublonne, relire deux fois est sans consequence.
+  # passage du lendemain rattrape les alertes manquees. Le magasin
+  # dedoublonne, relire deux fois est sans consequence.
   lookback_hours: 50
 
-  senders:
-    - immoweb.be
-    - zimmo.be
-    - immovlan.be
-    - immoscoop.be
-    - realo.be
-    - logic-immo.be
-    - biddit.be
-    - era.be
-    - century21.be
-    - trevi.be
-    - weinvest.be
-    - easyimmo.be
+  # Liste VIDE = tous les expediteurs acceptes. La boite est dediee, elle
+  # ne recoit que des alertes : filtrer sur l’expediteur ne ferait qu’ecarter
+  # en silence une agence ajoutee plus tard. Le tri se fait sur le contenu.
+  senders: []
+
+  # Conserve a titre indicatif — decommenter pour restreindre :
+  # senders_exemple:
+  #   - immoweb
+  #   - zimmo
+  #   - immovlan
+  #   - immoscoop
+  #   - realo
+  #   - logic-immo
+  #   - biddit
+  #   - era.be
+  #   - century21
+  #   - trevi
+  #   - weinvest
+  #   - easyimmo
 
 # ===================================================================
-# Digest quotidien. C'est le seul mail qu'un humain recoit : les
-# alertes des portails arrivent dans la boite dediee que personne
-# n'ouvre jamais.
+# Digest quotidien par mail. Desactive : la page est le seul canal.
 # ===================================================================
 notify:
-  enabled: true
+  enabled: false
 
-  # Destinataires du digest. Rien a voir avec la boite lue par le
-  # script : ces personnes ne recoivent que le recapitulatif.
   to:
-    - adresse.de.ta.tante@example.com
-    - thibaultmt@icloud.com
+    - maisonrecherchebe@gmail.com
 
   smtp_host: smtp.gmail.com     # iCloud : smtp.mail.me.com, port 587
   smtp_port: 465
 
-  # false = pas de mail les matins sans nouveaute. Evite d'habituer
-  # le destinataire a ignorer un mail quotidien vide.
+  # false = pas de mail les matins sans nouveaute.
   send_when_empty: false

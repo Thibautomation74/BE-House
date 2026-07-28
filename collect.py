@@ -21,6 +21,7 @@ from copy import deepcopy
 from dataclasses import dataclass, asdict, field
 from datetime import datetime, timedelta, timezone
 from email.header import decode_header, make_header
+from urllib.parse import unquote
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -64,9 +65,14 @@ RE_PRICE_A = re.compile(_MONTANT + r"\s*(?:€|EUR\b|euros?)", re.I)
 RE_PRICE_B = re.compile(r"(?:€|EUR)\s*" + _MONTANT, re.I)
 
 RE_BEDROOMS = re.compile(r"(\d{1,2})\s*(?:chambres?\b|ch\.|slaapkamers?\b|bed\s?rooms?\b|beds?\b)", re.I)
-RE_BATHROOMS = re.compile(r"(\d{1,2})\s*(?:salles?\s+de\s+bains?|badkamers?|bath\s?rooms?\b|baths?\b)", re.I)
+RE_BATHROOMS = re.compile(r"(\d{1,2})\s*(?:salles?\s+de\s+bains?|badkamers?|bath\s?rooms?\b|baths?\b|salles?\s+d'eau|sdb\b)", re.I)
 RE_FACADES = re.compile(r"(\d)\s*(?:fa[cç]ades?|gevels?)", re.I)
 RE_PEB = re.compile(r"\b(?:PEB|EPC)\s*[:\-]?\s*([A-G])\b", re.I)
+
+# En Flandre, le nombre de facades ne s'ecrit pas en chiffres mais en type de
+# bati : open bebouwing = 4 facades, halfopen = 3, gesloten = 2.
+RE_BEBOUWING = re.compile(r"\b(open|halfopen|half-open|gesloten)\s+bebouwing\b", re.I)
+BEBOUWING = {"open": 4, "halfopen": 3, "half-open": 3, "gesloten": 2}
 # Code postal belge : 4 chiffres — exactement comme une surface de terrain.
 # "terrain 1100 m²" serait lu comme le code postal 1100, et "1400 m²" comme
 # Nivelles : l'annonce basculerait dans la mauvaise zone. On exclut donc tout
@@ -74,21 +80,40 @@ RE_PEB = re.compile(r"\b(?:PEB|EPC)\s*[:\-]?\s*([A-G])\b", re.I)
 # belges placent le code postal de maniere fiable : .../floreffe/5150/11000003
 RE_ZIP = re.compile(r"\b([1-9]\d{3})\b(?!\s*(?:m\s*(?:²|2\b)|€|EUR|ares?|ca\b))", re.I)
 RE_ZIP_URL = re.compile(r"/([1-9]\d{3})/")
+# Un numero de reference court ressemble a un code postal : "Ref. 4521".
+RE_REF_AVANT = re.compile(r"(?:r[ée]f\.?|ref\.?|n[°o]|id|code|nr\.?)\s*:?\s*$", re.I)
 
 # Terrain : forme metrique explicitement etiquetee
 RE_TERRAIN_M2 = re.compile(
     r"(?:terrain|jardin|parcelle|superficie\s+(?:du\s+)?terrain|grond|tuin|perceel"
-    r"|land\s*(?:area|surface)?|plot|garden|ground\s*area)"
+    r"|land\s*(?:area|surface)?|plot|garden|ground\s*area|grondoppervlakte|perceeloppervlakte|tuinoppervlakte)"
     r"[^\d]{0,25}(\d[\d\s\u00a0.]{0,7})\s*m\s*(?:²|2\b)", re.I)
 # Terrain : notation belge en ares / centiares, ex "7a 50ca" ou "12 ares"
 RE_TERRAIN_ARES = re.compile(r"(\d{1,3})\s*a(?:res?)?\s*(?:(\d{1,2})\s*ca)?", re.I)
 # Surface habitable etiquetee
 RE_HAB_LABEL = re.compile(
-    r"(?:habitable|hab\.|woonopp|bewoonbare?|living\s*(?:area|space)|liveable)[^\d]{0,15}(\d[\d\s\u00a0.]{1,6})\s*m\s*(?:²|2\b)", re.I)
+    r"(?:habitable|hab\.|woonopp|bewoonbare?|living\s*(?:area|space)|liveable|woonoppervlakte|bewoonbaar)[^\d]{0,15}(\d[\d\s\u00a0.]{1,6})\s*m\s*(?:²|2\b)", re.I)
 # Meme precaution que pour les prix, sur les surfaces.
 RE_ANY_M2 = re.compile(r"(?<!\d)(\d{1,3}(?:[.\s\u00a0]\d{3})+|\d{1,4})\s*m\s*(?:²|2\b)", re.I)
 
 RE_TRACKING = re.compile(r"[?&](utm_[^&]+|xtor[^&]*|cmpid[^&]*|mtm_[^&]*|pk_[^&]*)", re.I)
+
+# Beaucoup d'emails marketing enveloppent leurs liens dans un redirecteur :
+# click.mail.exemple.be/c/xyz?url=https%3A%2F%2Fvraie-annonce... On extrait
+# l'adresse reelle, sans quoi toutes les annonces auraient le meme domaine.
+RE_REDIRECT = re.compile(r"[?&](?:url|u|redirect|target|dest|link)=(https?[^&]+)", re.I)
+
+# Liste NOIRE et non blanche : tout domaine inconnu est considere comme une
+# source d'annonces potentielle. On n'ecarte que ce qui n'en est visiblement
+# pas — reseaux sociaux, magasins d'applications, pages de compte.
+DOMAINES_EXCLUS = re.compile(
+    r"(facebook|instagram|twitter|x\.com|linkedin|youtube|tiktok|pinterest|whatsapp"
+    r"|apps\.apple\.com|play\.google\.com|google\.com/maps|goo\.gl"
+    r"|mailchimp|sendgrid|list-manage)", re.I)
+CHEMINS_EXCLUS = re.compile(
+    r"/(unsubscribe|desabo|desinscription|uitschrijven|account|mon-compte|my-account"
+    r"|profil|login|signin|settings|parametres|privacy|cookies|mentions|contact"
+    r"|conditions|terms|help|aide|faq|blog|actualites|news)(/|$|\?)", re.I)
 
 
 BASE_FIELDS = ("id", "portal", "url", "title", "price", "living_area",
@@ -149,13 +174,42 @@ def html_of(msg: email.message.Message) -> str:
     return "\n".join(parts)
 
 
+def unwrap(url: str) -> str:
+    """Suit un redirecteur marketing jusqu'a l'adresse reelle de l'annonce."""
+    for _ in range(3):
+        match = RE_REDIRECT.search(url)
+        if not match:
+            break
+        url = unquote(match.group(1))
+    return url
+
+
 def identify(url: str) -> tuple[str, str] | None:
+    """Retourne (nom affiche, identifiant unique) ou None si l'adresse ne peut
+    pas etre une annonce.
+
+    Les portails connus beneficient d'un nom propre et d'une extraction fine
+    de leur numero d'annonce. Tout autre domaine est accepte par defaut : une
+    agence ajoutee demain fonctionne sans que personne ne modifie ce fichier.
+    """
+    url = unwrap(url)
+    if not url.lower().startswith("http"):
+        return None
+
     for name, url_re, id_re in PORTALS:
         if url_re.search(url):
             match = id_re.search(url.split("?")[0].rstrip("/"))
             raw = match.group(1) if match else url.split("?")[0][-40:]
             return name, f"{re.sub(r'[^a-z0-9]', '', name.lower())}:{raw}"
-    return None
+
+    if DOMAINES_EXCLUS.search(url) or CHEMINS_EXCLUS.search(url):
+        return None
+
+    hote = re.sub(r"^https?://(www\.)?", "", url).split("/")[0].split("?")[0]
+    if not hote or "." not in hote:
+        return None
+    chemin = url.split("?")[0].rstrip("/")
+    return hote, f"{hote}:{chemin[-60:]}"
 
 
 # --------------------------------------------------------------------------
@@ -221,13 +275,25 @@ def parse_email(raw_html: str) -> list[Listing]:
         beds = RE_BEDROOMS.search(text)
         baths = RE_BATHROOMS.search(text)
         facades = RE_FACADES.search(text)
+        if not facades:
+            beb = RE_BEBOUWING.search(text)
+            nb_facades = BEBOUWING.get(beb.group(1).lower()) if beb else None
+        else:
+            nb_facades = int(facades.group(1))
         peb = RE_PEB.search(text)
-        # L'URL prime sur le texte : elle n'est pas polluee par les surfaces.
-        zip_url = RE_ZIP_URL.search(url)
-        zipc = zip_url or RE_ZIP.search(rest)
+        code_postal = extract_zip(url, rest)
 
-        if price is None and living is None and land is None:
-            continue  # lien de service (compte, desinscription), pas une annonce
+        # Niveau de preuve exige avant de retenir un lien comme annonce.
+        # Un portail connu suffit avec un seul indice. Un domaine inconnu doit
+        # montrer un prix ET une caracteristique de bien : sinon le pied de
+        # page d'une agence fabriquerait de fausses annonces a chaque envoi.
+        connu = any(rx.search(url) for _, rx, _ in PORTALS)
+        indices = sum(x is not None for x in (living, land, beds))
+        if connu:
+            if price is None and living is None and land is None:
+                continue
+        elif price is None or indices == 0:
+            continue
 
         found[listing_id] = Listing(
             id=listing_id,
@@ -239,15 +305,44 @@ def parse_email(raw_html: str) -> list[Listing]:
             land_area=land,
             bedrooms=int(beds.group(1)) if beds else None,
             bathrooms=int(baths.group(1)) if baths else None,
-            facades=int(facades.group(1)) if facades else None,
+            facades=nb_facades,
             peb=peb.group(1).upper() if peb else "",
-            zipcode=zipc.group(1) if zipc else "",
+            zipcode=code_postal,
         )
 
     return list(found.values())
 
 
 # --------------------------------------------------------------------------
+def extract_zip(url: str, texte: str) -> str:
+    """Choisit le code postal le plus credible.
+
+    Trois pieges successifs : l'URL est la source la plus sure ; un numero de
+    reference ("Ref. 4521") a la meme forme ; et une annonce cite souvent
+    plusieurs nombres a quatre chiffres. On ecarte donc les references, puis
+    on privilegie le candidat suivi d'un nom de commune.
+    """
+    depuis_url = RE_ZIP_URL.search(url)
+    if depuis_url:
+        return depuis_url.group(1)
+
+    candidats = []
+    for m in RE_ZIP.finditer(texte):
+        avant = texte[max(0, m.start() - 12): m.start()]
+        if RE_REF_AVANT.search(avant):
+            continue                      # "Ref. 4521" n'est pas un code postal
+        apres = texte[m.end(): m.end() + 30]
+        suivi_commune = bool(re.match(r"\s+[A-ZÀ-Ý][\w\-']{2,}", apres))
+        candidats.append((suivi_commune, m.start(), m.group(1)))
+
+    if not candidats:
+        return ""
+    # Un code postal suivi d'un nom de commune l'emporte ; sinon le dernier
+    # cite, les annonces placant la localisation en fin de descriptif.
+    avec_commune = [c for c in candidats if c[0]]
+    return (avec_commune[0][2] if avec_commune else candidats[-1][2])
+
+
 def in_zone(zipcode: str, ranges: list, excluded: list | None = None) -> bool:
     if not zipcode:
         return True
@@ -410,11 +505,14 @@ def fetch_emails(cfg: dict) -> list[str]:
     since = (datetime.now(timezone.utc) - timedelta(hours=int(conf.get("lookback_hours", 26))))
     bodies: list[str] = []
     gardes: list[str] = []
+    ignores: set[str] = set()
     lus = 0
 
     with imaplib.IMAP4_SSL(host) as imap:
         imap.login(user, password)
         imap.select(conf.get("folder", "INBOX"))
+        # SINCE seul, sans UNSEEN : on prend les messages lus ET non lus.
+        # Associe a BODY.PEEK, la boite ressort exactement comme avant.
         status, data = imap.search(None, f'(SINCE "{since:%d-%b-%Y}")')
         if status != "OK":
             return bodies
@@ -444,13 +542,19 @@ def fetch_emails(cfg: dict) -> list[str]:
             sender = decode(msg.get("From", "")).lower()
             allowed = conf.get("senders") or []
             if allowed and not any(s.lower() in sender for s in allowed):
+                ignores.add(sender[-60:])
                 continue
             bodies.append(html_of(msg))
             gardes.append(decode(msg.get("Subject", ""))[:70])
 
-    print(f"{lus} mails lus, {len(bodies)} retenus apres filtre expediteur.")
+    print(f"{lus} mails (lus et non lus) sur {int(conf.get('lookback_hours', 26))}h, "
+          f"{len(bodies)} retenus apres filtre expediteur.")
     for sujet in gardes[:8]:
         print(f"    · {sujet}")
+    if ignores:
+        print(f"  {len(ignores)} expediteur(s) ecarte(s) — a verifier si une alerte manque :")
+        for exp in sorted(ignores)[:8]:
+            print(f"    x {exp}")
     return bodies
 
 
