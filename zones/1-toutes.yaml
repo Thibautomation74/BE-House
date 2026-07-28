@@ -1,0 +1,48 @@
+# Zone unique. Les alertes des portails font deja le filtrage principal ;
+# ce fichier ne sert plus qu'a nettoyer ce qui passe au travers.
+criteria:
+  label: Maisons à voir
+  subtitle: Brabant wallon, Namurois — hors orbite de Charleroi
+
+  # --- Criteres FERMES : rejettent l'annonce -------------------------
+  # Uniquement ceux dont une erreur serait evidente et couteuse.
+  price_max: 460000             # petite marge : une annonce a 455 000 se negocie
+
+  zipcode_ranges:
+    - [1300, 1499]              # Brabant wallon : Ottignies, LLN, Wavre, Chastre,
+                                # Walhain, Genappe, Court-St-Etienne, Perwez
+    - [5000, 5199]              # Namur, Gembloux, Sombreffe, Floreffe, Fosses
+    - [5300, 5399]              # Andenne, Eghezee, La Bruyere
+
+  zipcode_exclude:
+    - [6000, 6299]              # orbite de Charleroi, aeroport de Gosselies
+
+  # --- Criteres SOUPLES : signalent sans rejeter ---------------------
+  # L'annonce reste affichee, avec une pastille indiquant l'ecart.
+  # Deplacer une ligne d'ici vers le bloc du dessus la rend bloquante.
+  soft:
+    - bedrooms_min
+    - bathrooms_min
+    - facades_min
+    - land_min
+
+  bedrooms_min: 3
+  bathrooms_min: 1
+  facades_min: 3
+  land_min: 500
+
+  reference_price_per_sqm: null
+
+  # Seul filtre textuel conserve : il ecarte le gros oeuvre.
+  exclude_keywords:
+    - "à rénover"
+    - "a renover"
+    - "gros oeuvre"
+    - "gros œuvre"
+    - "viager"
+    - "te renoveren"
+
+  always_verify:
+    - "cuisine ouverte"
+    - "pas de pierre apparente à l'intérieur"
+    - "environnement calme"
