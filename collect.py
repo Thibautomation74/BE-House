@@ -38,7 +38,8 @@ BRUSSELS = ZoneInfo("Europe/Brussels")
 # Pour ajouter une agence : une ligne ici, rien d'autre a toucher.
 # --------------------------------------------------------------------------
 PORTALS = [
-    ("Immoweb",    re.compile(r"immoweb\.be/(?:fr|nl|en)/annonce", re.I), re.compile(r"/(\d{6,})")),
+    ("Immoweb",    re.compile(r"immoweb\.be/(?:[a-z]{2}/)?(?:annonce|classified|zoekertje)", re.I),
+     re.compile(r"/(\d{6,})")),
     ("Zimmo",      re.compile(r"zimmo\.be/", re.I),                       re.compile(r"/([A-Za-z0-9]{5,})/?$")),
     ("Immovlan",   re.compile(r"immovlan\.be/", re.I),                    re.compile(r"([A-Z]{2}\d{6,}|\d{6,})")),
     ("Immoscoop",  re.compile(r"immoscoop\.be/", re.I),                   re.compile(r"/(\d{5,})")),
@@ -58,12 +59,12 @@ PORTALS = [
 # comme un seul nombre, le numero de reference se collant au prix. On exige
 # donc soit des groupes de 3 chiffres separes proprement, soit un nombre
 # compact de 4 a 7 chiffres — jamais un melange.
-_MONTANT = r"(?<!\d)(\d{1,3}(?:[.\s\u00a0]\d{3})+|\d{4,7})"
+_MONTANT = r"(?<!\d)(\d{1,3}(?:[.,\s\u00a0]\d{3})+|\d{4,7})"
 RE_PRICE_A = re.compile(_MONTANT + r"\s*(?:€|EUR\b|euros?)", re.I)
 RE_PRICE_B = re.compile(r"(?:€|EUR)\s*" + _MONTANT, re.I)
 
-RE_BEDROOMS = re.compile(r"(\d{1,2})\s*(?:chambres?\b|ch\.|slaapkamers?\b|bedrooms?\b)", re.I)
-RE_BATHROOMS = re.compile(r"(\d{1,2})\s*(?:salles?\s+de\s+bains?|badkamers?)", re.I)
+RE_BEDROOMS = re.compile(r"(\d{1,2})\s*(?:chambres?\b|ch\.|slaapkamers?\b|bed\s?rooms?\b|beds?\b)", re.I)
+RE_BATHROOMS = re.compile(r"(\d{1,2})\s*(?:salles?\s+de\s+bains?|badkamers?|bath\s?rooms?\b|baths?\b)", re.I)
 RE_FACADES = re.compile(r"(\d)\s*(?:fa[cç]ades?|gevels?)", re.I)
 RE_PEB = re.compile(r"\b(?:PEB|EPC)\s*[:\-]?\s*([A-G])\b", re.I)
 # Code postal belge : 4 chiffres — exactement comme une surface de terrain.
@@ -76,13 +77,14 @@ RE_ZIP_URL = re.compile(r"/([1-9]\d{3})/")
 
 # Terrain : forme metrique explicitement etiquetee
 RE_TERRAIN_M2 = re.compile(
-    r"(?:terrain|jardin|parcelle|superficie\s+(?:du\s+)?terrain|grond|tuin|perceel)"
+    r"(?:terrain|jardin|parcelle|superficie\s+(?:du\s+)?terrain|grond|tuin|perceel"
+    r"|land\s*(?:area|surface)?|plot|garden|ground\s*area)"
     r"[^\d]{0,25}(\d[\d\s\u00a0.]{0,7})\s*m\s*(?:²|2\b)", re.I)
 # Terrain : notation belge en ares / centiares, ex "7a 50ca" ou "12 ares"
 RE_TERRAIN_ARES = re.compile(r"(\d{1,3})\s*a(?:res?)?\s*(?:(\d{1,2})\s*ca)?", re.I)
 # Surface habitable etiquetee
 RE_HAB_LABEL = re.compile(
-    r"(?:habitable|hab\.|woonopp|bewoonbare?)[^\d]{0,15}(\d[\d\s\u00a0.]{1,6})\s*m\s*(?:²|2\b)", re.I)
+    r"(?:habitable|hab\.|woonopp|bewoonbare?|living\s*(?:area|space)|liveable)[^\d]{0,15}(\d[\d\s\u00a0.]{1,6})\s*m\s*(?:²|2\b)", re.I)
 # Meme precaution que pour les prix, sur les surfaces.
 RE_ANY_M2 = re.compile(r"(?<!\d)(\d{1,3}(?:[.\s\u00a0]\d{3})+|\d{1,4})\s*m\s*(?:²|2\b)", re.I)
 
@@ -407,6 +409,8 @@ def fetch_emails(cfg: dict) -> list[str]:
 
     since = (datetime.now(timezone.utc) - timedelta(hours=int(conf.get("lookback_hours", 26))))
     bodies: list[str] = []
+    gardes: list[str] = []
+    lus = 0
 
     with imaplib.IMAP4_SSL(host) as imap:
         imap.login(user, password)
@@ -436,11 +440,17 @@ def fetch_emails(cfg: dict) -> list[str]:
                 print(f"  message ignore ({err})")  # arreter toute la collecte
                 continue
 
+            lus += 1
             sender = decode(msg.get("From", "")).lower()
             allowed = conf.get("senders") or []
             if allowed and not any(s.lower() in sender for s in allowed):
                 continue
             bodies.append(html_of(msg))
+            gardes.append(decode(msg.get("Subject", ""))[:70])
+
+    print(f"{lus} mails lus, {len(bodies)} retenus apres filtre expediteur.")
+    for sujet in gardes[:8]:
+        print(f"    · {sujet}")
     return bodies
 
 
