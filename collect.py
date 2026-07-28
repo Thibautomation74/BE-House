@@ -434,10 +434,15 @@ def load_zones() -> list[Path]:
 
 def main() -> None:
     now = datetime.now(BRUSSELS)
+    # Deux passages par jour, a 7h et 8h locales. Le premier attrape les
+    # portails matinaux, le second ceux qui envoient plus tard : une alerte
+    # arrivee a 7h14 serait perdue jusqu'au lendemain avec un seul passage.
+    # Repasser est sans risque, le magasin dedoublonne.
     if os.environ.get("FORCE") != "1":
-        target = int(os.environ.get("SEND_HOUR", "7"))
-        if now.hour != target:
-            print(f"Heure locale {now:%H:%M} != {target}h a Bruxelles, execution ignoree.")
+        heures = {int(h) for h in os.environ.get("SEND_HOURS", "7,8").split(",")}
+        if now.hour not in heures:
+            print(f"Heure locale {now:%H:%M} hors des passages prevus "
+                  f"({sorted(heures)}h a Bruxelles), execution ignoree.")
             return
 
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
@@ -513,8 +518,17 @@ def main() -> None:
             "août", "septembre", "octobre", "novembre", "décembre"]
     date_label = f"{jours[now.weekday()]} {now.day} {mois[now.month - 1]}"
 
+    # Garde-fou : deux passages quotidiens ne doivent pas produire deux mails.
+    marque = DATA / "last_digest.txt"
+    deja_envoye = marque.exists() and marque.read_text().strip() == today
+
     try:
-        send_digest(sections, cfg, cfg.get("page_url", ""), date_label)
+        if deja_envoye:
+            print("Digest deja envoye aujourd'hui, second passage silencieux.")
+        else:
+            send_digest(sections, cfg, cfg.get("page_url", ""), date_label)
+            if (cfg.get("notify") or {}).get("enabled"):
+                marque.write_text(today)
     except Exception as err:
         # Un echec d'envoi ne doit pas faire echouer la collecte : les donnees
         # sont deja ecrites et la page reste a jour.
