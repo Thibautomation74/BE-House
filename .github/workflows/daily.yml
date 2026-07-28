@@ -2,14 +2,20 @@ name: Veille immo quotidienne
 
 on:
   schedule:
-    # GitHub Actions tourne en UTC. Trois declenchements pour obtenir deux
-    # passages locaux (7h et 8h) quelle que soit l'heure d'ete ou d'hiver :
-    #   ete  (UTC+2) : 05h->07h, 06h->08h, 07h->09h ignore
-    #   hiver(UTC+1) : 05h->06h ignore, 06h->07h, 07h->08h
-    # collect.py verifie l'heure locale et ignore les passages hors creneau.
-    - cron: "0 5 * * *"
-    - cron: "0 6 * * *"
-    - cron: "0 7 * * *"
+    # GitHub Actions tourne en UTC, et ses taches planifiees sont en
+    # "meilleur effort" : une demande pile a l'heure ronde subit la charge
+    # maximale et peut etre retardee de 30 min, voire abandonnee. On decale
+    # donc a la minute 17, largement moins encombree.
+    #
+    # Trois declenchements pour obtenir des passages locaux a 7h et 8h
+    # quelle que soit la saison :
+    #   ete  (UTC+2) : 05h17->07h17, 06h17->08h17, 07h17->09h17
+    #   hiver(UTC+1) : 05h17->06h17, 06h17->07h17, 07h17->08h17
+    # collect.py accepte les heures locales 7, 8 et 9 : cette tolerance
+    # absorbe les retards de GitHub sans multiplier les passages inutiles.
+    - cron: "17 5 * * *"
+    - cron: "17 6 * * *"
+    - cron: "17 7 * * *"
   workflow_dispatch:
     inputs:
       force:
