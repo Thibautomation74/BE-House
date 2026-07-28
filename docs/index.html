@@ -112,6 +112,10 @@
   .checks{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
   .chk{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.03em;
     color:var(--amber);border:1px solid rgba(138,100,20,.35);border-radius:2px;padding:2px 6px}
+  /* Ecart mesure : l'info est connue et ne colle pas au critere.
+     A distinguer nettement de l'ambre, qui signale une info absente. */
+  .chk.miss{color:var(--stamp);border-color:rgba(164,57,47,.4);
+    background:rgba(164,57,47,.05);font-weight:500}
 
   .empty{border:1px dashed var(--rule);border-radius:3px;padding:44px 22px;text-align:center;
     color:var(--ink-2);max-width:500px;margin:8px auto}
@@ -141,7 +145,7 @@
   <nav class="filters" id="filters" hidden>
     <button data-filter="all" aria-pressed="true">Tout</button>
     <button data-filter="new" aria-pressed="false">Ce matin</button>
-    <button data-filter="land" aria-pressed="false">Terrain confirmé</button>
+    <button data-filter="ok" aria-pressed="false">Sans écart</button>
   </nav>
 
   <main id="out"></main>
@@ -172,6 +176,8 @@ fetch("data/zones.json?" + Date.now())
 
 function buildTabs() {
   const nav = document.getElementById("zones");
+  // Une seule zone : l'onglet unique n'apporte rien, on le masque.
+  if (state.zones.length < 2) { nav.hidden = true; return; }
   nav.hidden = false;
   nav.innerHTML = state.zones.map((z, i) =>
     `<button role="tab" data-slug="${z.slug}" aria-selected="${i === 0}">${z.label}` +
@@ -239,13 +245,12 @@ function rejectionLine(rejected, seen) {
 function render() {
   const rows = state.listings.filter(l =>
     state.filter === "new"  ? l.is_new :
-    state.filter === "land" ? l.land_area != null : true);
+    state.filter === "ok"   ? !(l.misses && l.misses.length) : true);
 
   if (!rows.length) {
     out.innerHTML = `<div class="empty"><h2>Rien à signaler ce matin</h2>
-      <p>Aucune annonce ne correspond à ces critères sur les sept derniers jours.
-      Vérifie que les alertes sont toujours actives sur les portails,
-      et regarde l’autre zone.</p></div>`;
+      <p>Aucune annonce sur les sept derniers jours. Vérifie que les alertes
+      sont toujours actives sur les portails.</p></div>`;
     return;
   }
 
@@ -293,8 +298,11 @@ function render() {
           <span class="min" style="left:${minPct}%"></span>
         </div>
       </div>
-      ${l.unknown && l.unknown.length
-        ? `<div class="checks">${l.unknown.map(u => `<span class="chk">${u}</span>`).join("")}</div>`
+      ${(l.misses && l.misses.length) || (l.unknown && l.unknown.length)
+        ? `<div class="checks">` +
+          (l.misses || []).map(m => `<span class="chk miss">${m}</span>`).join("") +
+          (l.unknown || []).map(u => `<span class="chk">${u}</span>`).join("") +
+          `</div>`
         : ""}
       <span class="go">Voir sur ${l.portal}<span class="arrow">↗</span></span>
     </a>`;
