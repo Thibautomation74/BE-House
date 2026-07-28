@@ -113,6 +113,7 @@ class Listing:
     is_new: bool = True
     flags: list[str] = field(default_factory=list)
     unknown: list[str] = field(default_factory=list)
+    misses: list[str] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------
@@ -276,9 +277,21 @@ def apply_criteria(listings: list[Listing], crit: dict) -> tuple[list[Listing], 
     """
     kept: list[Listing] = []
     rejects: dict[str, int] = {}
+    souples = set(crit.get("soft", []))
 
     def reject(reason: str) -> None:
         rejects[reason] = rejects.get(reason, 0) + 1
+
+    def controle(item: Listing, cle: str, valeur, seuil, motif: str, ecart: str) -> bool:
+        """Retourne True s'il faut rejeter. Un critere declare souple ne
+        rejette jamais : il depose une pastille d'ecart sur la fiche."""
+        if valeur is None or not seuil or valeur >= seuil:
+            return False
+        if cle in souples:
+            item.misses.append(ecart)
+            return False
+        reject(motif)
+        return True
 
     for item in listings:
         if item.price is not None and crit.get("price_max") and item.price > crit["price_max"]:
@@ -288,14 +301,19 @@ def apply_criteria(listings: list[Listing], crit: dict) -> tuple[list[Listing], 
         if not in_zone(item.zipcode, crit.get("zipcode_ranges", []),
                        crit.get("zipcode_exclude", [])):
             reject("hors zone"); continue
-        if item.bedrooms is not None and crit.get("bedrooms_min") and item.bedrooms < crit["bedrooms_min"]:
-            reject("chambres"); continue
-        if item.bathrooms is not None and crit.get("bathrooms_min") and item.bathrooms < crit["bathrooms_min"]:
-            reject("salle de bain"); continue
-        if item.facades is not None and crit.get("facades_min") and item.facades < crit["facades_min"]:
-            reject("façades"); continue
-        if item.land_area is not None and crit.get("land_min") and item.land_area < crit["land_min"]:
-            reject("terrain"); continue
+
+        if controle(item, "bedrooms_min", item.bedrooms, crit.get("bedrooms_min"),
+                    "chambres", f"{item.bedrooms} ch."):
+            continue
+        if controle(item, "bathrooms_min", item.bathrooms, crit.get("bathrooms_min"),
+                    "salle de bain", f"{item.bathrooms} sdb"):
+            continue
+        if controle(item, "facades_min", item.facades, crit.get("facades_min"),
+                    "façades", f"{item.facades} façades"):
+            continue
+        if controle(item, "land_min", item.land_area, crit.get("land_min"),
+                    "terrain", f"terrain {item.land_area} m²"):
+            continue
 
         low = item.title.lower()
         if any(word.lower() in low for word in crit.get("exclude_keywords", [])):
