@@ -18,7 +18,10 @@ imap:
   host: imap.gmail.com          # Gmail. iCloud : imap.mail.me.com
   user: ""                      # vide = la valeur du secret IMAP_USER
   folder: INBOX
-  lookback_hours: 26
+  # 50h et non 26 : si GitHub saute une journee de planification, le
+  # passage du lendemain rattrape quand meme les alertes manquees.
+  # Le magasin dedoublonne, relire deux fois est sans consequence.
+  lookback_hours: 50
 
   senders:
     - immoweb.be
@@ -40,12 +43,13 @@ imap:
 # n'ouvre jamais.
 # ===================================================================
 notify:
-  enabled: false
+  enabled: true
 
   # Destinataires du digest. Rien a voir avec la boite lue par le
   # script : ces personnes ne recoivent que le recapitulatif.
   to:
-    - maisonrecherchebe@gmail.com
+    - adresse.de.ta.tante@example.com
+    - thibaultmt@icloud.com
 
   smtp_host: smtp.gmail.com     # iCloud : smtp.mail.me.com, port 587
   smtp_port: 465

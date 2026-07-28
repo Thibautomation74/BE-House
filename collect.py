@@ -434,12 +434,12 @@ def load_zones() -> list[Path]:
 
 def main() -> None:
     now = datetime.now(BRUSSELS)
-    # Deux passages par jour, a 7h et 8h locales. Le premier attrape les
+    # Passages a 7h, 8h et 9h locales. Le premier attrape les
     # portails matinaux, le second ceux qui envoient plus tard : une alerte
     # arrivee a 7h14 serait perdue jusqu'au lendemain avec un seul passage.
     # Repasser est sans risque, le magasin dedoublonne.
     if os.environ.get("FORCE") != "1":
-        heures = {int(h) for h in os.environ.get("SEND_HOURS", "7,8").split(",")}
+        heures = {int(h) for h in os.environ.get("SEND_HOURS", "7,8,9").split(",")}
         if now.hour not in heures:
             print(f"Heure locale {now:%H:%M} hors des passages prevus "
                   f"({sorted(heures)}h a Bruxelles), execution ignoree.")
