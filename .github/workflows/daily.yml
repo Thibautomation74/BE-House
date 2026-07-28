@@ -2,11 +2,14 @@ name: Veille immo quotidienne
 
 on:
   schedule:
-    # GitHub Actions tourne en UTC. On declenche a 05:00 et 06:00 UTC :
-    # l'un des deux correspond a 07:00 a Bruxelles selon l'heure d'ete/hiver.
-    # collect.py verifie l'heure locale reelle et ignore la mauvaise execution.
+    # GitHub Actions tourne en UTC. Trois declenchements pour obtenir deux
+    # passages locaux (7h et 8h) quelle que soit l'heure d'ete ou d'hiver :
+    #   ete  (UTC+2) : 05h->07h, 06h->08h, 07h->09h ignore
+    #   hiver(UTC+1) : 05h->06h ignore, 06h->07h, 07h->08h
+    # collect.py verifie l'heure locale et ignore les passages hors creneau.
     - cron: "0 5 * * *"
     - cron: "0 6 * * *"
+    - cron: "0 7 * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -37,6 +40,8 @@ jobs:
         env:
           IMAP_USER: ${{ secrets.IMAP_USER }}
           IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FORCE: ${{ github.event.inputs.force }}
         run: python collect.py
 
