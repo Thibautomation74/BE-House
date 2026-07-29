@@ -75,6 +75,16 @@
   .dot-fresh{display:inline-block;width:6px;height:6px;border-radius:50%;
     background:var(--stamp);margin-right:6px;vertical-align:1px}
 
+  /* Photo principale. Ratio fixe pour que la grille reste alignee meme
+     quand une annonce n'en a pas. Erreur de chargement -> le bloc se
+     retire de lui-meme plutot que d'afficher une icone cassee. */
+  .shot{margin:-16px -16px 2px;aspect-ratio:16/10;overflow:hidden;
+    background:linear-gradient(180deg,rgba(14,24,38,.06),rgba(14,24,38,.03));
+    border-bottom:1px solid var(--rule)}
+  .shot img{width:100%;height:100%;object-fit:cover;display:block;
+    transition:transform .35s cubic-bezier(.2,.7,.3,1)}
+  .card:hover .shot img{transform:scale(1.03)}
+
   .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .stamp{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;
          text-transform:uppercase;color:var(--stamp);font-weight:600}
@@ -276,6 +286,8 @@ function render() {
 
     return `<a class="card ${ageCls}" href="${l.url}" target="_blank" rel="noopener"
               style="animation-delay:${Math.min(i * 28, 340)}ms">
+      ${l.photo ? `<div class="shot"><img src="${l.photo}" alt="" loading="lazy"
+           onerror="this.closest('.shot').remove()"></div>` : ""}
       <div class="top">
         <span class="badge-age ${ageCls}">${ageTxt}</span>
         <span class="portal">${l.portal}</span>
