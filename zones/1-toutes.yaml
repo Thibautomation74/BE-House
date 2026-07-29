@@ -1,25 +1,23 @@
-# Zone unique. Les alertes des portails font deja le filtrage principal ;
-# ce fichier ne sert plus qu'a nettoyer ce qui passe au travers.
+# Aucun tri. Les alertes des portails filtrent deja ; le script se contente
+# de lire, nettoyer, dedoublonner et afficher ce qui arrive.
+#
+# Chaque champ vide ou null desactive le controle correspondant. Pour
+# reactiver un filtre un jour, il suffit de lui redonner une valeur.
 criteria:
   label: Maisons à voir
-  subtitle: Brabant wallon, Namurois — hors orbite de Charleroi
+  subtitle: Toutes les annonces reçues des portails et des agences
 
-  # --- Criteres FERMES : rejettent l'annonce -------------------------
-  # Uniquement ceux dont une erreur serait evidente et couteuse.
-  price_max: 460000             # petite marge : une annonce a 455 000 se negocie
+  # --- Aucun rejet -------------------------------------------------
+  price_max: null               # aucune limite de prix
+  price_min: null
+  zipcode_ranges: []            # aucune restriction geographique
+  zipcode_exclude: []
+  exclude_keywords: []          # aucun mot ecarte
 
-  zipcode_ranges:
-    - [1300, 1499]              # Brabant wallon : Ottignies, LLN, Wavre, Chastre,
-                                # Walhain, Genappe, Court-St-Etienne, Perwez
-    - [5000, 5199]              # Namur, Gembloux, Sombreffe, Floreffe, Fosses
-    - [5300, 5399]              # Andenne, Eghezee, La Bruyere
-
-  zipcode_exclude:
-    - [6000, 6299]              # orbite de Charleroi, aeroport de Gosselies
-
-  # --- Criteres SOUPLES : signalent sans rejeter ---------------------
-  # L'annonce reste affichee, avec une pastille indiquant l'ecart.
-  # Deplacer une ligne d'ici vers le bloc du dessus la rend bloquante.
+  # --- Reperes d'affichage : n'excluent rien -----------------------
+  # Ces seuils servent uniquement a poser une pastille rouge sur les
+  # fiches qui s'en ecartent, et a placer le repere de la jauge de
+  # terrain. L'annonce reste visible dans tous les cas.
   soft:
     - bedrooms_min
     - bathrooms_min
@@ -33,15 +31,8 @@ criteria:
 
   reference_price_per_sqm: null
 
-  # Seul filtre textuel conserve : il ecarte le gros oeuvre.
-  exclude_keywords:
-    - "à rénover"
-    - "a renover"
-    - "gros oeuvre"
-    - "gros œuvre"
-    - "viager"
-    - "te renoveren"
-
+  # Rappels ambres sur chaque fiche : non automatisables, a controler
+  # sur les photos avant de se deplacer.
   always_verify:
     - "cuisine ouverte"
     - "pas de pierre apparente à l'intérieur"
