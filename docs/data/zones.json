@@ -1,13 +1,13 @@
 {
- "generated_at": "2026-07-29T08:37+02:00",
+ "generated_at": "2026-07-29T08:41+02:00",
  "seen": 14,
  "retention_days": 7,
  "zones": [
   {
    "slug": "toutes",
    "label": "Maisons à voir",
-   "subtitle": "Brabant wallon, Namurois — hors orbite de Charleroi",
-   "count": 4,
+   "subtitle": "Toutes les annonces reçues des portails et des agences",
+   "count": 14,
    "new_count": 4
   }
  ]
