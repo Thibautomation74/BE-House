@@ -103,6 +103,23 @@ RE_TRACKING = re.compile(r"[?&](utm_[^&]+|xtor[^&]*|cmpid[^&]*|mtm_[^&]*|pk_[^&]
 # l'adresse reelle, sans quoi toutes les annonces auraient le meme domaine.
 RE_REDIRECT = re.compile(r"[?&](?:url|u|redirect|target|dest|link)=(https?[^&]+)", re.I)
 
+# Amazon SES (awstrack.me), utilise par Immoweb, place l'adresse reelle dans
+# le CHEMIN et non dans les parametres :
+#   https://xxx.r.eu-west-1.awstrack.me/L0/https%3A%2F%2Fimmoweb.be%2F.../1/0102...
+# Le segment encode ne contient aucune barre oblique litterale, ce qui permet
+# de l'isoler proprement du suffixe de suivi qui le suit.
+RE_REDIRECT_CHEMIN = re.compile(r"/(?:L\d+|u|r|c|cl|click|redirect)/(https?(?::|%3A)[^/\s]+)", re.I)
+
+# Libelles de bouton qui ne disent rien du bien.
+RE_TITRE_PAUVRE = re.compile(
+    r"^\s*(more\s+info|plus\s+d'?infos?|meer\s+info|en\s+savoir\s+plus|voir"
+    r"|see|bekijk|details?|d[ée]tails?|lire\s+la\s+suite|>+|→)\s*$", re.I)
+
+# Images de service : pixels de suivi, logos, icones, boutons.
+RE_IMAGE_SERVICE = re.compile(
+    r"(pixel|track|open\.gif|spacer|blank|logo|icon|badge|button|btn|arrow"
+    r"|facebook|instagram|twitter|linkedin|appstore|googleplay|footer|header)", re.I)
+
 # Liste NOIRE et non blanche : tout domaine inconnu est considere comme une
 # source d'annonces potentielle. On n'ecarte que ce qui n'en est visiblement
 # pas — reseaux sociaux, magasins d'applications, pages de compte.
@@ -117,7 +134,8 @@ CHEMINS_EXCLUS = re.compile(
 
 
 BASE_FIELDS = ("id", "portal", "url", "title", "price", "living_area",
-               "land_area", "bedrooms", "bathrooms", "facades", "peb", "zipcode")
+               "land_area", "bedrooms", "bathrooms", "facades", "peb", "zipcode",
+               "photo")
 
 
 @dataclass
@@ -134,6 +152,7 @@ class Listing:
     facades: int | None = None
     peb: str = ""
     zipcode: str = ""
+    photo: str = ""
     price_per_sqm: int | None = None
     first_seen: str = ""
     age_days: int = 0
@@ -175,13 +194,74 @@ def html_of(msg: email.message.Message) -> str:
 
 
 def unwrap(url: str) -> str:
-    """Suit un redirecteur marketing jusqu'a l'adresse reelle de l'annonce."""
-    for _ in range(3):
+    """Suit un redirecteur marketing jusqu'a l'adresse reelle de l'annonce.
+
+    Deux formes coexistent : l'adresse en parametre (?url=...) et l'adresse
+    encodee dans le chemin, employee par Amazon SES. Sans ce deballage, les
+    deux liens d'une meme annonce paraissent differents et elle apparait
+    deux fois.
+    """
+    for _ in range(4):
         match = RE_REDIRECT.search(url)
-        if not match:
-            break
-        url = unquote(match.group(1))
-    return url
+        if match:
+            url = unquote(match.group(1))
+            continue
+        match = RE_REDIRECT_CHEMIN.search(url)
+        if match:
+            url = unquote(match.group(1))
+            continue
+        break
+    return url.strip()
+
+
+def titre_propre(texte: str) -> str:
+    """Retourne le libelle du lien s'il decrit le bien, sinon une chaine vide.
+
+    Une alerte pose plusieurs liens sur la meme annonce ; seuls certains
+    portent un vrai titre, les autres disent "More info". On refuse ces
+    derniers plutot que de les fusionner, sans quoi le titre devient un
+    collage illisible.
+    """
+    texte = re.sub(r"\s+", " ", (texte or "")).strip()
+    if not texte or RE_TITRE_PAUVRE.match(texte) or len(texte) < 12:
+        return ""
+    return texte[:110]
+
+
+def titre_de_secours(url: str, bloc_texte: str) -> str:
+    """Aucun lien ne portait de titre : on se rabat sur l'adresse."""
+    for morceau in reversed(re.sub(r"[?#].*$", "", url).rstrip("/").split("/")):
+        if len(morceau) > 6 and not morceau.isdigit():
+            return morceau.replace("-", " ").replace("_", " ").strip().capitalize()[:110]
+    return re.sub(r"\s+", " ", bloc_texte or "Annonce").strip()[:110]
+
+
+def photo_du_bloc(block) -> str:
+    """Retient la plus grande image plausible du bloc, hors pixels et logos."""
+    meilleure, taille_max = "", 0
+    for img in block.find_all("img"):
+        src = unwrap((img.get("src") or img.get("data-src") or "").strip())
+        if not src.lower().startswith("http") or RE_IMAGE_SERVICE.search(src):
+            continue
+        try:
+            largeur = int(re.sub(r"[^\d]", "", str(img.get("width") or "0")) or 0)
+        except ValueError:
+            largeur = 0
+        if largeur and largeur < 80:      # icone ou pixel de suivi
+            continue
+        if largeur >= taille_max:
+            meilleure, taille_max = src, largeur
+    return meilleure
+
+
+def fusionner(a: Listing, b: Listing) -> Listing:
+    """Deux liens vers la meme annonce : on garde le meilleur de chacun."""
+    for champ in BASE_FIELDS:
+        if getattr(a, champ) in (None, "") and getattr(b, champ) not in (None, ""):
+            setattr(a, champ, getattr(b, champ))
+    if not a.title or (b.title and len(b.title) > len(a.title)):
+        a.title = b.title or a.title
+    return a
 
 
 def identify(url: str) -> tuple[str, str] | None:
@@ -236,26 +316,31 @@ def extract_land(text: str) -> tuple[int | None, str]:
 def parse_email(raw_html: str) -> list[Listing]:
     soup = BeautifulSoup(raw_html, "html.parser")
     found: dict[str, Listing] = {}
+    secours: dict[str, tuple] = {}
 
     for anchor in soup.find_all("a", href=True):
-        url = clean_url(anchor["href"])
+        url = unwrap(clean_url(anchor["href"]))
         ident = identify(url)
         if not ident:
             continue
         portal, listing_id = ident
-        if listing_id in found:
-            continue
 
         # Remontee du bloc contextuel, en s'arretant des qu'il contient une
-        # seconde annonce : sinon on melangerait le prix d'une annonce avec la
-        # surface de la suivante.
+        # SECONDE annonce. On compte les identifiants distincts et non les
+        # liens : une alerte Immoweb pose trois liens sur la meme annonce
+        # (image, titre, bouton), et les compter separement empecherait le
+        # bloc de s'elargir jusqu'au descriptif.
         block = anchor
         for _ in range(5):
             parent = block.parent
             if parent is None:
                 break
-            siblings = sum(1 for a in parent.find_all("a", href=True) if identify(clean_url(a["href"])))
-            if siblings > 1:
+            voisins = set()
+            for a in parent.find_all("a", href=True):
+                autre = identify(unwrap(clean_url(a["href"])))
+                if autre:
+                    voisins.add(autre[1])
+            if len(voisins) > 1:
                 break
             block = parent
             if len(block.get_text(" ", strip=True)) > 70:
@@ -295,11 +380,12 @@ def parse_email(raw_html: str) -> list[Listing]:
         elif price is None or indices == 0:
             continue
 
-        found[listing_id] = Listing(
+        candidat = Listing(
             id=listing_id,
             portal=portal,
             url=url,
-            title=(anchor.get_text(" ", strip=True) or text[:90])[:140],
+            title=titre_propre(anchor.get_text(" ", strip=True)),
+            photo=photo_du_bloc(block),
             price=price,
             living_area=float(living) if living else None,
             land_area=land,
@@ -309,6 +395,14 @@ def parse_email(raw_html: str) -> list[Listing]:
             peb=peb.group(1).upper() if peb else "",
             zipcode=code_postal,
         )
+        found[listing_id] = fusionner(found[listing_id], candidat) \
+            if listing_id in found else candidat
+        secours.setdefault(listing_id, (url, text[:110]))
+
+    # Aucun des liens ne portait de titre exploitable : repli sur l'adresse.
+    for cle, item in found.items():
+        if not item.title:
+            item.title = titre_de_secours(*secours[cle])
 
     return list(found.values())
 
