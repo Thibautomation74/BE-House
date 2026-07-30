@@ -554,6 +554,46 @@ def load_store() -> dict:
         return {}
 
 
+def reindexer(store: dict) -> dict:
+    """Recalcule les identifiants du magasin avec les regles actuelles.
+
+    Les annonces enregistrees avant le deballage des traceurs Amazon portent
+    une cle derivee de l'adresse de suivi : trois liens d'une meme annonce
+    donnaient trois entrees. On les re-cle ici, ce qui les fusionne
+    automatiquement — sans quoi les doublons persisteraient sept jours.
+    """
+    neuf: dict = {}
+    for cle, val in store.items():
+        data = dict(val.get("data") or {})
+        ident = identify(data.get("url", "")) if data.get("url") else None
+        if ident:
+            data["portal"], nouvelle = ident[0], ident[1]
+            data["url"] = unwrap(clean_url(data["url"]))
+            data["id"] = nouvelle
+        else:
+            nouvelle = cle
+
+        ancien = neuf.get(nouvelle)
+        if not ancien:
+            neuf[nouvelle] = {"first_seen": val["first_seen"], "data": data}
+            continue
+
+        # Deux entrees fusionnent : on garde la date la plus ancienne,
+        # le champ renseigne quand l'autre est vide, et le vrai titre
+        # plutot qu'un libelle de bouton.
+        if val["first_seen"] < ancien["first_seen"]:
+            ancien["first_seen"] = val["first_seen"]
+        for champ, valeur in data.items():
+            if ancien["data"].get(champ) in (None, "") and valeur not in (None, ""):
+                ancien["data"][champ] = valeur
+        titre_a, titre_b = ancien["data"].get("title", ""), data.get("title", "")
+        if RE_TITRE_PAUVRE.match(titre_a or "") and titre_b and not RE_TITRE_PAUVRE.match(titre_b):
+            ancien["data"]["title"] = titre_b
+        elif len(titre_b) > len(titre_a) and not RE_TITRE_PAUVRE.match(titre_b or ""):
+            ancien["data"]["title"] = titre_b
+    return neuf
+
+
 def update_store(store: dict, fresh: list[Listing], today: str, keep_days: int) -> dict:
     """Ajoute les annonces du jour et purge celles qui depassent la fenetre."""
     for item in fresh:
@@ -685,7 +725,13 @@ def main() -> None:
 
     DATA.mkdir(parents=True, exist_ok=True)
     keep_days = int(cfg.get("retention_days", 7))
-    store = update_store(load_store(), list(unique.values()), today, keep_days)
+    magasin = load_store()
+    avant = len(magasin)
+    magasin = reindexer(magasin)
+    if avant != len(magasin):
+        print(f"Memoire nettoyee : {avant} entrees -> {len(magasin)} "
+              f"({avant - len(magasin)} doublons fusionnes).")
+    store = update_store(magasin, list(unique.values()), today, keep_days)
     pool = store_to_listings(store, today)
     print(f"{len(pool)} annonces dans la fenetre de {keep_days} jours "
           f"(dont {sum(1 for x in pool if x.is_new)} de ce matin).")
