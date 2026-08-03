@@ -1,26 +1,26 @@
 name: Veille immo quotidienne
 
 on:
+  # --- Declencheur externe (fiable) --------------------------------
+  # Le cron de GitHub Actions est en "meilleur effort" : sa propre
+  # documentation prevoit que des executions soient retardees ou
+  # abandonnees en periode de charge. Un service de cron tiers appelle
+  # donc l'API GitHub chaque matin, ce qui rend le declenchement sur.
+  repository_dispatch:
+    types: [veille]
+
+  # --- Cron GitHub (filet de secours) ------------------------------
+  # Conserve : quand il fonctionne, il evite de dependre du tiers.
+  # Minute 17 plutot que l'heure ronde, moins encombree.
+  #   ete  (UTC+2) : 05h17->07h17, 06h17->08h17, 07h17->09h17
+  #   hiver(UTC+1) : 05h17->06h17, 06h17->07h17, 07h17->08h17
   schedule:
-    # GitHub Actions tourne en UTC, et ses taches planifiees sont en
-    # "meilleur effort" : une demande pile a l'heure ronde subit la charge
-    # maximale et peut etre retardee de 30 min, voire abandonnee. On decale
-    # donc a la minute 17, largement moins encombree.
-    #
-    # Trois declenchements pour obtenir des passages locaux a 7h et 8h
-    # quelle que soit la saison :
-    #   ete  (UTC+2) : 05h17->07h17, 06h17->08h17, 07h17->09h17
-    #   hiver(UTC+1) : 05h17->06h17, 06h17->07h17, 07h17->08h17
-    # collect.py accepte les heures locales 7, 8 et 9 : cette tolerance
-    # absorbe les retards de GitHub sans multiplier les passages inutiles.
     - cron: "17 5 * * *"
     - cron: "17 6 * * *"
     - cron: "17 7 * * *"
+
+  # --- Bouton manuel -----------------------------------------------
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Ignorer le controle d'heure"
-        default: "1"
 
 permissions:
   contents: write
@@ -48,7 +48,10 @@ jobs:
           IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          FORCE: ${{ github.event.inputs.force }}
+          # Seul le cron GitHub subit le controle d'heure. Un appel
+          # externe ou manuel s'execute immediatement : c'est
+          # l'appelant qui decide de l'horaire.
+          FORCE: ${{ github.event_name != 'schedule' && '1' || '' }}
         run: python collect.py
 
       - name: Publier le resultat
