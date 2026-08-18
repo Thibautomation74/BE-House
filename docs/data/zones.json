@@ -1,14 +1,14 @@
 {
- "generated_at": "2026-08-16T09:48+02:00",
- "seen": 4,
+ "generated_at": "2026-08-18T09:24+02:00",
+ "seen": 1,
  "retention_days": 7,
  "zones": [
   {
    "slug": "toutes",
    "label": "Maisons à voir",
    "subtitle": "Toutes les annonces reçues des portails et des agences",
-   "count": 5,
-   "new_count": 0
+   "count": 6,
+   "new_count": 1
   }
  ]
 }

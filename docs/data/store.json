@@ -22,7 +22,7 @@
   "data": {
    "id": "immoweb:21765820",
    "portal": "Immoweb",
-   "url": "https://Www.immoweb.be/en/classified/21765820?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedmimgen",
+   "url": "https://Www.immoweb.be/en/classified/21765820",
    "title": "€399,000 6 bd. • 245 m² 5000 NAMUR More info",
    "price": 399000,
    "living_area": 245.0,
@@ -40,7 +40,7 @@
   "data": {
    "id": "immoweb:21692902",
    "portal": "Immoweb",
-   "url": "https://Www.immoweb.be/en/classified/21692902?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedmimgen",
+   "url": "https://Www.immoweb.be/en/classified/21692902",
    "title": "€420,000 €395,000 5 bd. • 245 m² 5000 Namur More info",
    "price": 420000,
    "living_area": 245.0,
@@ -58,7 +58,7 @@
   "data": {
    "id": "immoweb:21762803",
    "portal": "Immoweb",
-   "url": "https://Www.immoweb.be/en/classified/21762803?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "url": "https://Www.immoweb.be/en/classified/21762803",
    "title": "Villa aux volumes incroyables à rénover ! €449,000 6 bd. • 275 m² 5140 SOMBREFFE More info",
    "price": 449000,
    "living_area": 275.0,
@@ -76,7 +76,7 @@
   "data": {
    "id": "immoweb:21768201",
    "portal": "Immoweb",
-   "url": "https://Www.immoweb.be/en/classified/21768201?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "url": "https://Www.immoweb.be/en/classified/21768201",
    "title": "Namur à vos pieds – Une vue d’exception depuis la Citadelle €449,000 4 bd. • 175 m² 5000 NAMUR More info",
    "price": 449000,
    "living_area": 175.0,
@@ -87,6 +87,24 @@
    "peb": "",
    "zipcode": "5000",
    "photo": "https://media-resize.immowebstatic.be/classifieds/c6cba4a8-b751-43a6-aaa3-07e745d42ad8/300x300/5ee148ba02958adb815bfbc2f9b7ecb3.jpg"
+  }
+ },
+ "immoweb:21771492": {
+  "first_seen": "2026-08-18",
+  "data": {
+   "id": "immoweb:21771492",
+   "portal": "Immoweb",
+   "url": "https://Www.immoweb.be/en/classified/21771492?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "title": "Vaste maison 4 chambres avec beau jardin €389,000 4 bd. • 197 m² 5000 NAMUR More info",
+   "price": 389000,
+   "living_area": 197.0,
+   "land_area": null,
+   "bedrooms": 4,
+   "bathrooms": null,
+   "facades": null,
+   "peb": "",
+   "zipcode": "5000",
+   "photo": "https://media-resize.immowebstatic.be/classifieds/7249f1f6-1265-4245-a9af-892787b3faa7/300x300/f6c14722d446c3c1a9b068de4a134c93.jpg"
   }
  }
 }
