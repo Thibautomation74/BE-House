@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-18T09:24+02:00",
+ "generated_at": "2026-08-19T09:25+02:00",
  "criteria": {
   "label": "Maisons à voir",
   "subtitle": "Toutes les annonces reçues des portails et des agences",
@@ -26,7 +26,7 @@
   ]
  },
  "count": 6,
- "new_count": 1,
+ "new_count": 0,
  "seen": 1,
  "retention_days": 7,
  "rejected": {},
@@ -47,8 +47,8 @@
    "photo": "https://media-resize.immowebstatic.be/classifieds/7249f1f6-1265-4245-a9af-892787b3faa7/300x300/f6c14722d446c3c1a9b068de4a134c93.jpg",
    "price_per_sqm": 1975,
    "first_seen": "2026-08-18",
-   "age_days": 0,
-   "is_new": true,
+   "age_days": 1,
+   "is_new": false,
    "flags": [],
    "unknown": [
     "terrain (500 m² min)",
@@ -75,7 +75,7 @@
    "photo": "https://media-resize.immowebstatic.be/classifieds/32a76300-2bce-42ee-a7f1-585da316055f/300x300/85eed0f297ec40474fb8dccbe4cf18b6.jpg",
    "price_per_sqm": 2207,
    "first_seen": "2026-08-15",
-   "age_days": 3,
+   "age_days": 4,
    "is_new": false,
    "flags": [],
    "unknown": [
@@ -103,7 +103,7 @@
    "photo": "https://media-resize.immowebstatic.be/classifieds/81ab1859-3eed-4f62-8c53-9ce694057d16/300x300/8e2bef56450e29410177c3c86208e621.jpg",
    "price_per_sqm": 1629,
    "first_seen": "2026-08-15",
-   "age_days": 3,
+   "age_days": 4,
    "is_new": false,
    "flags": [],
    "unknown": [
@@ -131,7 +131,7 @@
    "photo": "https://media-resize.immowebstatic.be/classifieds/55632abc-b7e6-4e55-a37f-8660664a5707/300x300/a3d15214de46058734c2318454cccb72.jpg",
    "price_per_sqm": 1714,
    "first_seen": "2026-08-15",
-   "age_days": 3,
+   "age_days": 4,
    "is_new": false,
    "flags": [],
    "unknown": [
@@ -159,7 +159,7 @@
    "photo": "https://media-resize.immowebstatic.be/classifieds/d7242714-b9e5-43d6-80f7-76c165d5a1db/300x300/9387ed8e43e761f662bbf8830ce04aba.jpg",
    "price_per_sqm": 1633,
    "first_seen": "2026-08-15",
-   "age_days": 3,
+   "age_days": 4,
    "is_new": false,
    "flags": [],
    "unknown": [
@@ -187,7 +187,7 @@
    "photo": "https://media-resize.immowebstatic.be/classifieds/c6cba4a8-b751-43a6-aaa3-07e745d42ad8/300x300/5ee148ba02958adb815bfbc2f9b7ecb3.jpg",
    "price_per_sqm": 2566,
    "first_seen": "2026-08-15",
-   "age_days": 3,
+   "age_days": 4,
    "is_new": false,
    "flags": [],
    "unknown": [
