@@ -94,7 +94,7 @@
   "data": {
    "id": "immoweb:21771492",
    "portal": "Immoweb",
-   "url": "https://Www.immoweb.be/en/classified/21771492?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "url": "https://Www.immoweb.be/en/classified/21771492",
    "title": "Vaste maison 4 chambres avec beau jardin €389,000 4 bd. • 197 m² 5000 NAMUR More info",
    "price": 389000,
    "living_area": 197.0,
@@ -105,6 +105,42 @@
    "peb": "",
    "zipcode": "5000",
    "photo": "https://media-resize.immowebstatic.be/classifieds/7249f1f6-1265-4245-a9af-892787b3faa7/300x300/f6c14722d446c3c1a9b068de4a134c93.jpg"
+  }
+ },
+ "immoweb:21776585": {
+  "first_seen": "2026-08-20",
+  "data": {
+   "id": "immoweb:21776585",
+   "portal": "Immoweb",
+   "url": "https://Www.immoweb.be/en/classified/21776585?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "title": "€350,000 4 bd. • 175 m² 5000 Namur More info",
+   "price": 350000,
+   "living_area": 175.0,
+   "land_area": null,
+   "bedrooms": null,
+   "bathrooms": null,
+   "facades": null,
+   "peb": "",
+   "zipcode": "5000",
+   "photo": "https://media-resize.immowebstatic.be/classifieds/8cd8dc97-473c-4dc6-a7fc-044599f8616e/300x300/ffd32a2851bdb5d8b863b5a122d41639.jpg"
+  }
+ },
+ "immoweb:21776980": {
+  "first_seen": "2026-08-20",
+  "data": {
+   "id": "immoweb:21776980",
+   "portal": "Immoweb",
+   "url": "https://Www.immoweb.be/en/classified/21776980?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "title": "€280,000 3 bd. • 5150 Floreffe More info",
+   "price": 280000,
+   "living_area": null,
+   "land_area": null,
+   "bedrooms": null,
+   "bathrooms": null,
+   "facades": null,
+   "peb": "",
+   "zipcode": "5150",
+   "photo": "https://media-resize.immowebstatic.be/classifieds/3ab4a000-052a-4c7f-9d61-05e4964a2cdb/300x300/ab90b31d213475a56e3b6ff129c228a8.jpg"
   }
  }
 }
