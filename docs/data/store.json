@@ -142,5 +142,41 @@
    "zipcode": "5150",
    "photo": "https://media-resize.immowebstatic.be/classifieds/3ab4a000-052a-4c7f-9d61-05e4964a2cdb/300x300/ab90b31d213475a56e3b6ff129c228a8.jpg"
   }
+ },
+ "immoweb:21777999": {
+  "first_seen": "2026-08-21",
+  "data": {
+   "id": "immoweb:21777999",
+   "portal": "Immoweb",
+   "url": "https://Www.immoweb.be/en/classified/21777999?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "title": "House €425,000 3 bd. • 1340 Ottignies-Louvain-La-Neuve More info",
+   "price": 425000,
+   "living_area": null,
+   "land_area": null,
+   "bedrooms": null,
+   "bathrooms": null,
+   "facades": null,
+   "peb": "",
+   "zipcode": "1340",
+   "photo": "https://media-resize.immowebstatic.be/classifieds/fcab39f0-36d2-402d-8d97-e29bf45463cf/300x300/d5e4b341866193a5d43cb61879192b14.jpg"
+  }
+ },
+ "immoweb:21780139": {
+  "first_seen": "2026-08-21",
+  "data": {
+   "id": "immoweb:21780139",
+   "portal": "Immoweb",
+   "url": "https://Www.immoweb.be/en/classified/21780139?utm_source=crm-b2c&utm_medium=email&utm_campaign=ali_seeker_iwb_b2c_emailing_standardali_x_x_belgium_x_x_x_en_x_email_x_x&utm_content=classifiedxlimgen",
+   "title": "CENTURY 21 Immo Demeuse Gembloux vous présente €450,000 3 bd. • 154 m² 5030 Gembloux More info",
+   "price": 450000,
+   "living_area": 154.0,
+   "land_area": null,
+   "bedrooms": null,
+   "bathrooms": null,
+   "facades": null,
+   "peb": "",
+   "zipcode": "5030",
+   "photo": "https://media-resize.immowebstatic.be/classifieds/9d4ae247-5e03-4c75-b5d0-17e45f3b3668/300x300/277e5b15fc2230c4a363d5f98d7c132c.jpg"
+  }
  }
 }
